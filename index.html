@@ -402,7 +402,7 @@ body {
       <table class="inverter-table">
         <thead>
           <tr>
-            <th>Model</th><th>Rated kW</th><th>Max Usable PV</th><th>MPPTs</th><th>Strings</th><th>Max Panels/MPPT</th><th>Max Panels Total</th><th>Cost (PHP)</th><th>Sell Price (PHP)</th>
+            <th>Model</th><th>kW</th><th>MPPTs</th><th>Max Pan.</th><th style="min-width:80px;">Cost (PHP)</th><th style="min-width:80px;">Sell (PHP)</th>
           </tr>
         </thead>
         <tbody id="inverterTableBody"></tbody>
@@ -487,7 +487,11 @@ body {
           <div style="font-size:18px;font-weight:700;color:var(--teal-dark);" id="statMonthlySave">PHP 0</div>
         </div>
       </div>
-      <div class="stats-grid" style="padding: 0 14px 12px;">
+      <div class="stats-grid" style="padding: 0 14px 12px; grid-template-columns: repeat(5, 1fr);">
+        <div class="stat-card">
+          <div class="stat-value" id="statKwhMonth">0</div>
+          <div class="stat-label">kWh / Month</div>
+        </div>
         <div class="stat-card">
           <div class="stat-value" id="statMonthly">0</div>
           <div class="stat-label">Monthly Savings</div>
@@ -633,7 +637,7 @@ body {
         </div>
         <div class="form-group">
           <label>Inv. Qty</label>
-          <input type="number" id="overrideInverterQty" placeholder="1" min="1" max="10" step="1" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="overrideInverterQty" value="0" min="0" max="10" step="1" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Batteries</label>
@@ -863,15 +867,11 @@ function buildInverterTable() {
     const markup = parseFloat(document.getElementById('inverterMarkup').value) || 80;
     const adjustedCost = Math.round(inv.cost * typeFactor);
     const sell = Math.round(adjustedCost * (1 + markup / 100));
-    const panelsPerMppt = inv.maxPanels / inv.mppt;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${inv.key}</strong></td>
       <td>${inv.rated}</td>
-      <td>${inv.maxPv} kW</td>
       <td>${inv.mppt}</td>
-      <td>${inv.strings}</td>
-      <td><strong>${panelsPerMppt}</strong></td>
       <td><strong>${inv.maxPanels}</strong></td>
       <td><input type="number" id="invCost_${i}" value="${adjustedCost}" step="1000" oninput="updateInvSell(${i})"></td>
       <td><input type="number" id="invSell_${i}" value="${sell}" step="1000" class="sell-price" oninput="recalcAll()"></td>
@@ -947,7 +947,8 @@ function recalcAll() {
 
   // Inverter
   const overrideInv = document.getElementById('overrideInverter').value;
-  const inverterQty = parseInt(document.getElementById('overrideInverterQty').value) || 1;
+  const inverterQtyRaw = parseInt(document.getElementById('overrideInverterQty').value);
+  const inverterQty = isNaN(inverterQtyRaw) ? 0 : inverterQtyRaw;
   let selectedInvIdx = -1;
   if (overrideInv) {
     selectedInvIdx = defaultInverters.findIndex(inv => inv.key === overrideInv);
@@ -1113,6 +1114,7 @@ function recalcAll() {
   const newBill = Math.max(monthlyBill - monthlySavings, 0);
   document.getElementById('statCurrentBill').textContent = 'PHP ' + fmtInt(monthlyBill);
   document.getElementById('statNewBill').textContent = 'PHP ' + fmtInt(newBill);
+  document.getElementById('statKwhMonth').textContent = fmtInt(monthlyGen);
   document.getElementById('statMonthlySave').textContent = 'PHP ' + fmtInt(monthlySavings);
 
   document.getElementById('statMonthly').textContent = 'PHP ' + fmtK(monthlySavings);
@@ -1148,7 +1150,9 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
 
   let rows = '';
   rows += `<tr><td>${panelDesc} (${systemKwp.toFixed(2)}kW)</td><td>${numPanels} pcs</td><td>${fmtNum(panelPrice)}</td><td>${fmtNum(panelTotal)}</td></tr>`;
-  rows += `<tr><td>${invDesc}</td><td>${inverterQty} pc${inverterQty > 1 ? 's' : ''}</td><td>${fmtNum(invSellEach)}</td><td>${fmtNum(invSellTotal)}</td></tr>`;
+  if (inverterQty > 0) {
+    rows += `<tr><td>${invDesc}</td><td>${inverterQty} pc${inverterQty > 1 ? 's' : ''}</td><td>${fmtNum(invSellEach)}</td><td>${fmtNum(invSellTotal)}</td></tr>`;
+  }
 
   if (includeBattery && numBatteries > 0) {
     const battUnit = batteryTotal / numBatteries;
@@ -1305,12 +1309,14 @@ function generatePDF() {
     unit: s.panelPrice,
     amount: s.panelTotal
   });
-  items.push({
-    desc: s.invDesc,
-    qty: s.inverterQty,
-    unit: s.invSellEach,
-    amount: s.inverterTotal
-  });
+  if (s.inverterQty > 0) {
+    items.push({
+      desc: s.invDesc,
+      qty: s.inverterQty,
+      unit: s.invSellEach,
+      amount: s.inverterTotal
+    });
+  }
   if (includeBattery) {
     const batUnit = s.batteryTotal / s.numBatteries;
     items.push({
@@ -1595,11 +1601,13 @@ function generatePDF2() {
     qty: s.numPanels,
     amount: s.panelTotal
   });
-  items2.push({
-    desc: s.invDesc,
-    qty: s.inverterQty,
-    amount: s.inverterTotal
-  });
+  if (s.inverterQty > 0) {
+    items2.push({
+      desc: s.invDesc,
+      qty: s.inverterQty,
+      amount: s.inverterTotal
+    });
+  }
   if (includeBattery) {
     items2.push({
       desc: battDesc,
