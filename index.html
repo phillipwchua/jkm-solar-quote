@@ -374,7 +374,7 @@ body {
       <div class="form-grid three-col">
         <div class="form-group">
           <label>Exchange Rate (PHP/USD)</label>
-          <input type="number" id="exchangeRate" value="56.00" step="0.01" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="exchangeRate" value="60.00" step="0.01" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Inverter Markup %</label>
@@ -445,11 +445,11 @@ body {
       <div class="form-grid three-col">
         <div class="form-group">
           <label>Electrical Installation Labor (PHP)</label>
-          <input type="number" id="wiringCost" value="0" step="100" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="wiringCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCostMain').dataset.auto='false'; recalcAll()">
         </div>
         <div class="form-group">
           <label>Installation Labor (PHP)</label>
-          <input type="number" id="laborCost" value="0" step="100" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="laborCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCostMain').dataset.auto='false'; recalcAll()">
         </div>
         <div class="form-group">
           <label>Wiring, Acc. &amp; Other Mat. Rate (%)</label>
@@ -521,8 +521,26 @@ body {
     <div class="card-body" id="client-body">
       <div class="form-grid">
         <div class="form-group full-span">
-          <label>Client Name</label>
-          <input type="text" id="clientName" class="input-yellow" placeholder="e.g. Juan Dela Cruz">
+          <div style="display:flex; gap:8px;">
+            <div style="flex:0 0 110px;">
+              <label for="clientSalutation">Salutation</label>
+              <select id="clientSalutation" class="input-yellow" style="width:100%;">
+                <option value="">(none)</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Ms.">Ms.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Engr.">Engr.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Atty.">Atty.</option>
+                <option value="Arch.">Arch.</option>
+                <option value="Prof.">Prof.</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <label for="clientName">Client Name</label>
+              <input type="text" id="clientName" class="input-yellow" style="width:100%;" placeholder="e.g. Juan Dela Cruz">
+            </div>
+          </div>
         </div>
         <div class="form-group full-span">
           <label>Address / Location</label>
@@ -557,6 +575,10 @@ body {
             <option value="Single Phase">Single Phase</option>
             <option value="Three Phase">Three Phase</option>
           </select>
+        </div>
+        <div class="form-group full-span">
+          <label for="approverName">Approver / Signatory (appears on PDFs)</label>
+          <input type="text" id="approverName" class="input-yellow" value="ENGR. PHILLIP CHUA" placeholder="e.g. ENGR. PHILLIP CHUA">
         </div>
       </div>
     </div>
@@ -689,11 +711,11 @@ body {
       <div class="form-grid three-col">
         <div class="form-group">
           <label>Electrical Installation Labor (PHP)</label>
-          <input type="number" id="wiringCostMain" value="0" step="500" class="input-yellow" oninput="syncWiringLabor(); recalcAll()" placeholder="0 = Inclusive">
+          <input type="number" id="wiringCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
         </div>
         <div class="form-group">
           <label>Installation Labor (PHP)</label>
-          <input type="number" id="laborCostMain" value="0" step="500" class="input-yellow" oninput="syncWiringLabor(); recalcAll()" placeholder="0 = Inclusive">
+          <input type="number" id="laborCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
         </div>
         <div class="form-group">
           <label>Wiring, Accessories &amp; Other Materials Costs Rate (%)</label>
@@ -762,7 +784,7 @@ body {
         <!-- Panel Layout -->
         <div>
           <h4 style="text-align:center;color:var(--teal-dark);margin-bottom:8px;font-size:13px;">ROOF PANEL LAYOUT</h4>
-          <canvas id="panelCanvas" width="520" height="380" style="width:100%;border:1px solid var(--border);border-radius:8px;background:#ECEFF1;"></canvas>
+          <canvas id="panelCanvas" width="800" height="640" style="width:100%;border:1px solid var(--border);border-radius:8px;background:#ECEFF1;"></canvas>
           <p class="note-text" style="text-align:center;margin-top:4px;" id="panelDimensions"></p>
         </div>
         <!-- Wiring Schematic -->
@@ -885,6 +907,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('panelWattage').addEventListener('input', buildInverterTable);
 });
 
+// ══════════════════════════════════════
+// QUOTE NUMBER AUTO-INCREMENT
+// ══════════════════════════════════════
+function getNextQuoteNumber() {
+  const last = localStorage.getItem('jkm_last_quote_no') || 'QTN-005';
+  const match = last.match(/^(\D*)(\d+)$/);
+  if (!match) return 'QTN-006';
+  const prefix = match[1] || 'QTN-';
+  const num = parseInt(match[2]) + 1;
+  const padLen = match[2].length;
+  return prefix + String(num).padStart(padLen, '0');
+}
+function commitQuoteNumber() {
+  const qn = document.getElementById('quoteNo').value;
+  if (qn) localStorage.setItem('jkm_last_quote_no', qn);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const qnEl = document.getElementById('quoteNo');
+  if (qnEl) qnEl.value = getNextQuoteNumber();
+});
+
 function updateInvSell(i) {
   const cost = parseFloat(document.getElementById(`invCost_${i}`).value) || 0;
   const markup = parseFloat(document.getElementById('inverterMarkup').value) || 80;
@@ -922,9 +965,9 @@ function recalcAll() {
   const battPrice1 = parseFloat(document.getElementById('battPrice1').value) || 135000;
   const battPriceN = parseFloat(document.getElementById('battPriceN').value) || 125000;
 
-  // Labor & Other Cost
-  const wiringCost = parseFloat(document.getElementById('wiringCost').value) || 0;
-  const laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
+  // Labor & Other Cost (values computed later based on system kWp once panels determined)
+  let wiringCost = parseFloat(document.getElementById('wiringCost').value) || 0;
+  let laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
   const otherCostRate = parseFloat(document.getElementById('otherCostRate').value) || 0;
 
   // Consumption
@@ -944,6 +987,24 @@ function recalcAll() {
   if (numPanels < 1 && monthlyBill > 0) numPanels = 1;
   if (numPanels < 0) numPanels = 0;
   const systemKwp = numPanels * panelWattage / 1000;
+
+  // Auto-compute electrical installation & labor based on kW when not manually overridden
+  const wiringEl = document.getElementById('wiringCost');
+  const wiringMainEl = document.getElementById('wiringCostMain');
+  const laborEl = document.getElementById('laborCost');
+  const laborMainEl = document.getElementById('laborCostMain');
+  if (wiringEl.dataset.auto !== 'false') {
+    const autoWiring = Math.round(systemKwp * 2500);
+    wiringEl.value = autoWiring;
+    wiringMainEl.value = autoWiring;
+    wiringCost = autoWiring;
+  }
+  if (laborEl.dataset.auto !== 'false') {
+    const autoLabor = Math.round(systemKwp * 1750);
+    laborEl.value = autoLabor;
+    laborMainEl.value = autoLabor;
+    laborCost = autoLabor;
+  }
 
   // Inverter
   const overrideInv = document.getElementById('overrideInverter').value;
@@ -1133,6 +1194,8 @@ function recalcAll() {
     monthlyKwh, dailyKwh, dailyGen, monthlyGen, battPrice1, battPriceN,
     invMppt: invMpptEach, invMpptTotal: invMppt, panelsPerMppt, maxPanelsTotal, mpptStrings,
     invRated: defaultInverters[selectedInvIdx].rated,
+    invStringsEach: defaultInverters[selectedInvIdx].strings,
+    stringsPerMppt: Math.max(1, Math.round(defaultInverters[selectedInvIdx].strings / invMpptEach)),
     battKwh: battV * battAh / 1000, battAh,
     monthlyBill, rateKwh, targetOffset, peakSunHours,
   };
@@ -1140,6 +1203,283 @@ function recalcAll() {
   // Redraw layout diagrams
   drawPanelLayout();
   drawSchematic();
+  if (typeof redrawRoofCanvas === 'function') redrawRoofCanvas();
+}
+
+// ══════════════════════════════════════
+// CANVAS: MPPT WIRING SCHEMATIC (panels on TOP, inverter MPPTs at BOTTOM)
+// ══════════════════════════════════════
+function drawMpptWiring(targetCtx, targetW, targetH) {
+  const useExternal = targetCtx && targetW && targetH;
+  let ctx, W, H;
+  if (useExternal) {
+    ctx = targetCtx; W = targetW; H = targetH;
+  } else {
+    const canvas = document.getElementById('mpptWiringCanvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+    W = canvas.width; H = canvas.height;
+  }
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#FAFAFA';
+  ctx.fillRect(0, 0, W, H);
+
+  const s = currentSystem;
+  if (!s || !s.numPanels || !s.mpptStrings || s.mpptStrings.length === 0) {
+    ctx.fillStyle = '#9E9E9E';
+    ctx.font = '13px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Enter a bill to see the MPPT wiring schematic', W / 2, H / 2);
+    return;
+  }
+
+  const strings = s.mpptStrings;            // array of panel counts per MPPT port
+  const invQty = s.inverterQty || 1;
+  const mpptsPerInv = s.invMppt || strings.length;
+  const totalMppts = strings.length;
+  const stringsPerMppt = s.stringsPerMppt || 1;   // e.g. 18K = 2 strings per MPPT
+
+  // Layout regions
+  const margin = 16;
+  const invBoxH = 70;
+  const invTopY = H - margin - invBoxH;
+  const panelRowBottomY = invTopY - 70;
+  const panelH = Math.min(34, (panelRowBottomY - margin - 20) / 2);
+  const panelW = panelH * 0.58;              // portrait aspect
+  const panelGap = 3;
+  const subStringGap = 6;      // gap between sub-strings within same MPPT
+  const groupGap = 18;         // gap between MPPT groups
+
+  // MPPT colors (same palette)
+  const mpptColors = ['#1565C0', '#00897B', '#F57C00', '#7B1FA2', '#C62828', '#2E7D32'];
+  const mpptFills = ['rgba(21,101,192,0.75)', 'rgba(0,137,123,0.75)', 'rgba(245,124,0,0.75)', 'rgba(123,31,162,0.75)', 'rgba(198,40,40,0.75)', 'rgba(46,125,50,0.75)'];
+
+  // For each MPPT entry, split panels equally across sub-strings
+  // Returns an array of sub-string panel counts for that MPPT (e.g. 12 panels, 2 strings → [6,6])
+  function splitIntoSubstrings(total, subs) {
+    if (subs <= 1) return [total];
+    const base = Math.floor(total / subs);
+    const rem = total - base * subs;
+    const arr = [];
+    for (let i = 0; i < subs; i++) arr.push(base + (i < rem ? 1 : 0));
+    return arr.filter(v => v > 0);
+  }
+
+  // Build layout data: per-MPPT group with sub-strings
+  const mpptGroups = strings.map((count, si) => {
+    const subs = splitIntoSubstrings(count, stringsPerMppt);
+    const subGroupWidths = subs.map(n => n * panelW + (n - 1) * panelGap);
+    const groupWidth = subGroupWidths.reduce((a, b) => a + b, 0) + (subs.length - 1) * subStringGap;
+    return { count, subs, subGroupWidths, groupWidth, mpptIdx: si };
+  });
+
+  const totalW = mpptGroups.reduce((a, g) => a + g.groupWidth, 0) + (mpptGroups.length - 1) * groupGap;
+  const startX = (W - totalW) / 2;
+
+  // ── Draw panel groups (TOP) with sub-strings ──
+  let curX = startX;
+  const panelGroupCenters = [];   // per-MPPT: {x, yBottom, mpptIdx, subRails:[{x,yBottom}]}
+  mpptGroups.forEach((g) => {
+    const color = mpptColors[g.mpptIdx % mpptColors.length];
+    const fill = mpptFills[g.mpptIdx % mpptFills.length];
+    const gy = margin + 18;
+
+    // MPPT group label above
+    ctx.fillStyle = color;
+    ctx.font = 'bold 10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('MPPT ' + (g.mpptIdx + 1) + ' (' + g.count + ' panels' + (g.subs.length > 1 ? ' / ' + g.subs.length + ' strings' : '') + ')', curX + g.groupWidth / 2, gy - 2);
+
+    // Draw each sub-string
+    let sx = curX;
+    const subRails = [];
+    g.subs.forEach((subCount, subIdx) => {
+      const subW = g.subGroupWidths[subIdx];
+      for (let p = 0; p < subCount; p++) {
+        const px = sx + p * (panelW + panelGap);
+        // Roof tile indicator
+        ctx.fillStyle = '#ECEFF1';
+        ctx.strokeStyle = '#455A64';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px, gy + 6);
+        ctx.lineTo(px + panelW / 2, gy);
+        ctx.lineTo(px + panelW, gy + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Panel body
+        ctx.fillStyle = fill;
+        ctx.fillRect(px, gy + 6, panelW, panelH);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(px, gy + 6, panelW, panelH);
+        // Cell grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 0.5;
+        for (let gg = 1; gg < 3; gg++) {
+          ctx.beginPath();
+          ctx.moveTo(px + gg * panelW / 3, gy + 6);
+          ctx.lineTo(px + gg * panelW / 3, gy + 6 + panelH);
+          ctx.stroke();
+        }
+        // Wattage label
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold ' + Math.max(8, Math.min(11, panelW * 0.38)) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((s.panelWattage || 620), px + panelW / 2, gy + 6 + panelH / 2);
+      }
+      // Sub-string bus bar
+      const busY = gy + 6 + panelH + 8;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx + panelW / 2, gy + 6 + panelH);
+      ctx.lineTo(sx + panelW / 2, busY);
+      ctx.moveTo(sx + subW - panelW / 2, gy + 6 + panelH);
+      ctx.lineTo(sx + subW - panelW / 2, busY);
+      for (let i = 1; i < subCount - 1; i++) {
+        const stubX = sx + panelW / 2 + i * (panelW + panelGap);
+        ctx.moveTo(stubX, gy + 6 + panelH);
+        ctx.lineTo(stubX, busY);
+      }
+      ctx.moveTo(sx + panelW / 2, busY);
+      ctx.lineTo(sx + subW - panelW / 2, busY);
+      ctx.stroke();
+
+      // Sub-string count label
+      ctx.fillStyle = color;
+      ctx.font = '9px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('String ' + (subIdx + 1) + ': ' + subCount, sx + subW / 2, busY + 2);
+
+      subRails.push({ x: sx + subW / 2, yBottom: busY });
+      sx += subW + subStringGap;
+    });
+
+    panelGroupCenters.push({
+      x: curX + g.groupWidth / 2,
+      mpptIdx: g.mpptIdx,
+      subRails,
+    });
+
+    curX += g.groupWidth + groupGap;
+  });
+
+  // ── Draw inverter(s) with MPPT ports (BOTTOM) ──
+  const invBoxGap = 28;
+  const invBoxW = Math.max(130, (W - margin * 2 - (invQty - 1) * invBoxGap) / invQty);
+  const totalInvW = invQty * invBoxW + (invQty - 1) * invBoxGap;
+  const invStartX = (W - totalInvW) / 2;
+
+  // MPPT port positions map (per inverter, per MPPT)
+  const mpptPorts = []; // {x, y, globalIdx}
+  for (let q = 0; q < invQty; q++) {
+    const ix = invStartX + q * (invBoxW + invBoxGap);
+    // Inverter box
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#37474F';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(ix, invTopY, invBoxW, invBoxH);
+    ctx.fill();
+    ctx.stroke();
+    // Diagonal separator (AC / DC)
+    ctx.beginPath();
+    ctx.moveTo(ix, invTopY);
+    ctx.lineTo(ix + invBoxW, invTopY + invBoxH);
+    ctx.strokeStyle = '#90A4AE';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // AC waveform (top-left)
+    ctx.strokeStyle = '#37474F';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    const acX = ix + 10, acY = invTopY + 14;
+    for (let t = 0; t <= 30; t++) {
+      const ang = (t / 30) * Math.PI * 2;
+      const yy = acY + Math.sin(ang) * 6;
+      if (t === 0) ctx.moveTo(acX + t, yy); else ctx.lineTo(acX + t, yy);
+    }
+    ctx.stroke();
+    // DC symbol (bottom-right)
+    const dcX = ix + invBoxW - 24, dcY = invTopY + invBoxH - 18;
+    ctx.beginPath(); ctx.moveTo(dcX, dcY); ctx.lineTo(dcX + 14, dcY); ctx.stroke();
+    ctx.beginPath();
+    for (let t = 0; t < 14; t += 3) { ctx.moveTo(dcX + t, dcY + 4); ctx.lineTo(dcX + t + 2, dcY + 4); }
+    ctx.stroke();
+    // Inverter label
+    ctx.fillStyle = '#37474F';
+    ctx.font = 'bold 10px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText((s.invTypeLabel || 'Hybrid').toUpperCase() + ' INV ' + (invQty > 1 ? (q + 1) : ''), ix + invBoxW / 2, invTopY + invBoxH + 4);
+    ctx.font = '9px Segoe UI, sans-serif';
+    ctx.fillText('Solis ' + (s.invRated || '') + 'kW · ' + mpptsPerInv + ' MPPTs', ix + invBoxW / 2, invTopY + invBoxH + 17);
+
+    // MPPT ports on top edge of this inverter
+    const portSpacing = invBoxW / (mpptsPerInv + 1);
+    for (let m = 0; m < mpptsPerInv; m++) {
+      const globalIdx = q * mpptsPerInv + m;
+      if (globalIdx >= totalMppts) break;
+      const portX = ix + portSpacing * (m + 1);
+      const portY = invTopY;
+      // Port stub
+      ctx.strokeStyle = mpptColors[globalIdx % mpptColors.length];
+      ctx.fillStyle = mpptColors[globalIdx % mpptColors.length];
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(portX, portY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Port label
+      ctx.fillStyle = '#37474F';
+      ctx.font = 'bold 9px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('MPPT' + (m + 1), portX, portY - 6);
+      mpptPorts.push({ x: portX, y: portY, globalIdx });
+    }
+  }
+
+  // ── Draw wiring from sub-string rails DOWN to MPPT ports ──
+  panelGroupCenters.forEach(grp => {
+    const port = mpptPorts.find(p => p.globalIdx === grp.mpptIdx);
+    if (!port) return;
+    const color = mpptColors[grp.mpptIdx % mpptColors.length];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+
+    // Merge Y — where all sub-strings of this MPPT converge
+    const mergeY = port.y - 32;
+    // Draw drop lines from each sub-string rail to merge level
+    grp.subRails.forEach(rail => {
+      ctx.beginPath();
+      ctx.moveTo(rail.x, rail.yBottom + 14); // below the "String X: N" label
+      ctx.lineTo(rail.x, mergeY);
+      ctx.stroke();
+    });
+    // Horizontal merge line joining all sub-string drops
+    if (grp.subRails.length > 1) {
+      const leftRail = grp.subRails[0].x;
+      const rightRail = grp.subRails[grp.subRails.length - 1].x;
+      ctx.beginPath();
+      ctx.moveTo(leftRail, mergeY);
+      ctx.lineTo(rightRail, mergeY);
+      ctx.stroke();
+    }
+    // Central down-line from merge midpoint to MPPT port (L-bend)
+    const midRailX = (grp.subRails[0].x + grp.subRails[grp.subRails.length - 1].x) / 2;
+    ctx.beginPath();
+    ctx.moveTo(midRailX, mergeY);
+    ctx.lineTo(midRailX, (mergeY + port.y) / 2);
+    ctx.lineTo(port.x, (mergeY + port.y) / 2);
+    ctx.lineTo(port.x, port.y);
+    ctx.stroke();
+  });
 }
 
 function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach, invSellTotal, inverterQty, numBatteries, batteryTotal,
@@ -1206,7 +1546,9 @@ function generatePDF() {
   const pw = mr - ml; // page width usable
 
   const s = currentSystem;
-  const clientName = document.getElementById('clientName').value || 'Client Name';
+  const clientNameRaw = document.getElementById('clientName').value || 'Client Name';
+  const salutation = document.getElementById('clientSalutation').value || '';
+  const clientName = (salutation ? salutation + ' ' : '') + clientNameRaw;
   const address = document.getElementById('clientAddress').value || '';
   const projectType = document.getElementById('projectType').value;
   const quoteNo = document.getElementById('quoteNo').value || 'QTN-001';
@@ -1419,16 +1761,19 @@ function generatePDF() {
   y += 0.18;
 
   // Warranty
-  const warranty = [
-    'Warranty : 12 years for modules enhanced product',
-    '   warranty and 30 years linear power performance warranty.',
-    '   1 year for PV mounting and workmanship, circuit breakers',
-    '   SPD and wires.',
-    '   4 years for Inverters.',
-    '   4 years for Batteries.',
+  y += 0.14;  // extra space above Warranty header
+  doc.setFont('helvetica', 'bold');
+  doc.text('Warranty:', ml + 0.04, y);
+  doc.setFont('helvetica', 'normal');
+  y += 0.14;
+  const warrantyItems = [
+    '11 years for modules enhanced product warranty and linear power performance warranty',
+    '1 year for PV mounting and workmanship, circuit breakers, SPD and wires',
+    '4 years for Inverters',
+    '4 years for Batteries',
   ];
-  warranty.forEach(w => {
-    doc.text(w, ml + 0.04, y);
+  warrantyItems.forEach(w => {
+    doc.text('\u2022  ' + w, ml + 0.10, y);
     y += 0.14;
   });
   y += 0.04;
@@ -1468,13 +1813,14 @@ function generatePDF() {
   doc.text('Thank you and best regards', ml, y);
   doc.text('Conforme,', ml + 3.5, y);
 
-  y += 0.48;
+  y += 0.70;
   doc.setFont('helvetica', 'bold');
-  doc.text('MR. PHILLIP CHUA', ml, y);
+  doc.text((document.getElementById('approverName').value || 'ENGR. PHILLIP CHUA').toUpperCase(), ml, y);
   doc.text(clientName.toUpperCase(), ml + 3.5, y);
 
   // Save
-  const filename = quoteNo + ' - ' + clientName + '.pdf';
+  const filename = quoteNo + ' - ' + clientNameRaw + '.pdf';
+  commitQuoteNumber();
   doc.save(filename);
 
   } catch (err) {
@@ -1499,7 +1845,9 @@ function generatePDF2() {
   const pw = mr - ml;
 
   const s = currentSystem;
-  const clientName = document.getElementById('clientName').value || 'Client Name';
+  const clientNameRaw = document.getElementById('clientName').value || 'Client Name';
+  const salutation = document.getElementById('clientSalutation').value || '';
+  const clientName = (salutation ? salutation + ' ' : '') + clientNameRaw;
   const address = document.getElementById('clientAddress').value || '';
   const projectType = document.getElementById('projectType').value;
   const quoteNo = document.getElementById('quoteNo').value || 'QTN-001';
@@ -1707,16 +2055,19 @@ function generatePDF2() {
   y += 0.18;
 
   // Warranty
-  const warranty2 = [
-    'Warranty : 12 years for modules enhanced product',
-    '   warranty and 30 years linear power performance warranty.',
-    '   1 year for PV mounting and workmanship, circuit breakers',
-    '   SPD and wires.',
-    '   4 years for Inverters.',
-    '   4 years for Batteries.',
+  y += 0.14;  // extra space above Warranty header
+  doc.setFont('helvetica', 'bold');
+  doc.text('Warranty:', ml + 0.04, y);
+  doc.setFont('helvetica', 'normal');
+  y += 0.14;
+  const warrantyItems2 = [
+    '11 years for modules enhanced product warranty and linear power performance warranty',
+    '1 year for PV mounting and workmanship, circuit breakers, SPD and wires',
+    '4 years for Inverters',
+    '4 years for Batteries',
   ];
-  warranty2.forEach(w => {
-    doc.text(w, ml + 0.04, y);
+  warrantyItems2.forEach(w => {
+    doc.text('\u2022  ' + w, ml + 0.10, y);
     y += 0.14;
   });
   y += 0.04;
@@ -1763,13 +2114,14 @@ function generatePDF2() {
   doc.text('Thank you and best regards', ml, y);
   doc.text('Conforme,', ml + 3.5, y);
 
-  y += 0.48;
+  y += 0.70;
   doc.setFont('helvetica', 'bold');
-  doc.text('MR. PHILLIP CHUA', ml, y);
+  doc.text((document.getElementById('approverName').value || 'ENGR. PHILLIP CHUA').toUpperCase(), ml, y);
   doc.text(clientName.toUpperCase(), ml + 3.5, y);
 
   // Save
-  const filename = quoteNo + ' - ' + clientName + ' (Summary).pdf';
+  const filename = quoteNo + ' - ' + clientNameRaw + ' (Summary).pdf';
+  commitQuoteNumber();
   doc.save(filename);
 
   } catch (err) {
@@ -1840,6 +2192,8 @@ function getProjectData() {
     _version: 1,
     _savedAt: new Date().toISOString(),
     // Client
+    clientSalutation: document.getElementById('clientSalutation').value,
+    approverName: document.getElementById('approverName').value,
     clientName: document.getElementById('clientName').value,
     clientAddress: document.getElementById('clientAddress').value,
     contactNumber: document.getElementById('contactNumber').value,
@@ -1861,7 +2215,9 @@ function getProjectData() {
     overrideBatteries: document.getElementById('overrideBatteries').value,
     // Pricing
     wiringCost: document.getElementById('wiringCostMain').value,
+    wiringCostAuto: document.getElementById('wiringCostMain').dataset.auto,
     laborCost: document.getElementById('laborCostMain').value,
+    laborCostAuto: document.getElementById('laborCostMain').dataset.auto,
     otherCostRate: document.getElementById('otherCostRate').value,
     discountType: document.getElementById('discountType').value,
     customDiscountPct: document.getElementById('customDiscountPct').value,
@@ -2024,6 +2380,8 @@ function loadProject(event) {
 
 function applyProjectData(data) {
   // Client
+  if (data.clientSalutation !== undefined) document.getElementById('clientSalutation').value = data.clientSalutation;
+  if (data.approverName !== undefined) document.getElementById('approverName').value = data.approverName;
   if (data.clientName !== undefined) document.getElementById('clientName').value = data.clientName;
   if (data.clientAddress !== undefined) document.getElementById('clientAddress').value = data.clientAddress;
   if (data.contactNumber !== undefined) document.getElementById('contactNumber').value = data.contactNumber;
@@ -2047,10 +2405,17 @@ function applyProjectData(data) {
   if (data.wiringCost !== undefined) {
     document.getElementById('wiringCostMain').value = data.wiringCost;
     document.getElementById('wiringCost').value = data.wiringCost;
+    // Restore manual-override flag (default to 'false' for loaded projects so saved value isn't overwritten)
+    const wAuto = (data.wiringCostAuto === 'true') ? 'true' : 'false';
+    document.getElementById('wiringCostMain').dataset.auto = wAuto;
+    document.getElementById('wiringCost').dataset.auto = wAuto;
   }
   if (data.laborCost !== undefined) {
     document.getElementById('laborCostMain').value = data.laborCost;
     document.getElementById('laborCost').value = data.laborCost;
+    const lAuto = (data.laborCostAuto === 'true') ? 'true' : 'false';
+    document.getElementById('laborCostMain').dataset.auto = lAuto;
+    document.getElementById('laborCost').dataset.auto = lAuto;
   }
   if (data.otherCostRate !== undefined) {
     document.getElementById('otherCostRate').value = data.otherCostRate;
@@ -2093,11 +2458,13 @@ function applyProjectData(data) {
 function resetForm() {
   if (!confirm('Reset all fields to defaults?')) return;
   document.getElementById('clientName').value = '';
+  document.getElementById('clientSalutation').value = '';
+  document.getElementById('approverName').value = 'ENGR. PHILLIP CHUA';
   document.getElementById('clientAddress').value = '';
   document.getElementById('contactNumber').value = '';
   document.getElementById('clientEmail').value = '';
-  document.getElementById('quoteNo').value = 'QTN-005';
-  document.getElementById('quoteDate').value = '';
+  document.getElementById('quoteNo').value = getNextQuoteNumber();
+  document.getElementById('quoteDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('monthlyBill').value = 0;
   document.getElementById('rateKwh').value = 12.50;
   document.getElementById('targetOffset').value = 100;
@@ -2111,9 +2478,13 @@ function resetForm() {
   document.getElementById('includeVat').value = 'no';
   document.getElementById('includeReceipt').value = 'no';
   document.getElementById('wiringCost').value = 0;
+  document.getElementById('wiringCost').dataset.auto = 'true';
   document.getElementById('laborCost').value = 0;
+  document.getElementById('laborCost').dataset.auto = 'true';
   document.getElementById('wiringCostMain').value = 0;
+  document.getElementById('wiringCostMain').dataset.auto = 'true';
   document.getElementById('laborCostMain').value = 0;
+  document.getElementById('laborCostMain').dataset.auto = 'true';
   document.getElementById('otherCostRate').value = 55.55;
   document.getElementById('otherCostRateConst').value = 55.55;
   document.getElementById('discountType').value = 'round';
@@ -2128,30 +2499,44 @@ function resetForm() {
 // ══════════════════════════════════════
 // CANVAS: PANEL LAYOUT
 // ══════════════════════════════════════
-function drawPanelLayout() {
-  const canvas = document.getElementById('panelCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
+function drawPanelLayout(targetCtx, targetW, targetH) {
+  const useExternal = targetCtx && targetW && targetH;
+  let ctx, W, H, canvasEl;
+  if (useExternal) {
+    ctx = targetCtx; W = targetW; H = targetH;
+  } else {
+    canvasEl = document.getElementById('panelCanvas');
+    if (!canvasEl) return;
+    ctx = canvasEl.getContext('2d');
+    W = canvasEl.width; H = canvasEl.height;
+  }
   ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#ECEFF1';
+  ctx.fillRect(0, 0, W, H);
 
   const s = currentSystem;
   if (!s.numPanels || s.numPanels < 1) return;
 
   const numPanels = s.numPanels;
-  const mpptCount = s.invMppt || 2;
   const strings = s.mpptStrings || [numPanels];
+  const invQty = s.inverterQty || 1;
+  const mpptsPerInv = s.invMppt || strings.length;
+  const totalMppts = strings.length;
+  const stringsPerMppt = s.stringsPerMppt || 1;
 
-  // Panel aspect ratio 1134:2382 ≈ 1:2.1 (portrait)
+  // Vertical regions
+  const panelRegionH = Math.floor(H * 0.55);
+  const invBoxH = Math.max(54, Math.floor(H * 0.11));
+  const infoBarH = 22;
+  const invTopY = H - infoBarH - invBoxH - 26; // leave room for inverter labels under box
+  const panelBottomLimit = panelRegionH;
+
+  // ── PANELS (Top region) ──
   const panelAspect = 1134 / 2382;
-
-  // Determine grid: lay out per MPPT string side by side
-  // Each string is a column group
   const stringLayouts = [];
   let totalCols = 0;
   strings.forEach((count, si) => {
     if (count === 0) return;
-    // Find best rows x cols for this string
     let bestCols = count, bestRows = 1, bestScore = Infinity;
     for (let c = 1; c <= count; c++) {
       const r = Math.ceil(count / c);
@@ -2161,62 +2546,53 @@ function drawPanelLayout() {
     stringLayouts.push({ count, cols: bestCols, rows: bestRows, mpptIdx: si });
     totalCols += bestCols;
   });
-
   const maxRows = Math.max(...stringLayouts.map(sl => sl.rows));
   const gap = 3;
-  const stringGap = 12;
-  const margin = 40;
+  const stringGap = 14;
+  const margin = 30;
   const availW = W - margin * 2 - (stringLayouts.length - 1) * stringGap;
-  const availH = H - margin * 2 - 30;
-
+  const availH = panelBottomLimit - margin - 20;
   let panelW = (availW - (totalCols - 1) * gap) / totalCols;
   let panelH = panelW / panelAspect;
   if (panelH * maxRows + (maxRows - 1) * gap > availH) {
     panelH = (availH - (maxRows - 1) * gap) / maxRows;
     panelW = panelH * panelAspect;
   }
-
   const totalDrawW = stringLayouts.reduce((sum, sl) => sum + sl.cols * (panelW + gap) - gap, 0) + (stringLayouts.length - 1) * stringGap;
   let startX = (W - totalDrawW) / 2;
-  const startY = margin + 20;
+  const startY = margin + 16;
 
-  // MPPT colors
-  const mpptColors = ['#1565C0', '#00897B', '#F57C00', '#7B1FA2'];
-  const mpptBorders = ['#0D47A1', '#00695C', '#E65100', '#4A148C'];
+  const mpptColors = ['#1565C0', '#00897B', '#F57C00', '#7B1FA2', '#C62828', '#2E7D32'];
+  const mpptBorders = ['#0D47A1', '#00695C', '#E65100', '#4A148C', '#8E0000', '#1B5E20'];
 
   let panelNum = 0;
+  const groupInfo = [];
   stringLayouts.forEach((sl, si) => {
     const color = mpptColors[sl.mpptIdx % mpptColors.length];
     const border = mpptBorders[sl.mpptIdx % mpptBorders.length];
-
-    // MPPT label
-    ctx.fillStyle = color;
-    ctx.font = 'bold 10px Segoe UI, sans-serif';
-    ctx.textAlign = 'center';
     const groupW = sl.cols * (panelW + gap) - gap;
-    ctx.fillText('MPPT ' + (sl.mpptIdx + 1) + ' (' + sl.count + ' panels)', startX + groupW / 2, startY - 6);
 
-    for (let r = 0; r < sl.rows; r++) {
-      for (let c = 0; c < sl.cols; c++) {
-        if (panelNum >= sl.count + (panelNum - sl.count >= 0 ? 0 : 0)) {
-          // Check within this string
-          const stringPanelIdx = r * sl.cols + c;
-          if (stringPanelIdx >= sl.count) continue;
-        }
-        const stringPanelIdx = r * sl.cols + c;
-        if (stringPanelIdx >= sl.count) continue;
+    // MPPT label above
+    ctx.fillStyle = color;
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('MPPT ' + (sl.mpptIdx + 1) + ' (' + sl.count + ' panels)', startX + groupW / 2, startY - 4);
 
+    let placed = 0;
+    for (let r = 0; r < sl.rows && placed < sl.count; r++) {
+      const colsList = [];
+      for (let c = 0; c < sl.cols; c++) colsList.push(c);
+      if (r % 2 === 1) colsList.reverse();
+      for (const c of colsList) {
+        if (placed >= sl.count) break;
         const x = startX + c * (panelW + gap);
         const y = startY + r * (panelH + gap);
-
-        // Panel body
         ctx.fillStyle = color;
         ctx.fillRect(x, y, panelW, panelH);
         ctx.strokeStyle = border;
         ctx.lineWidth = 1;
         ctx.strokeRect(x, y, panelW, panelH);
-
-        // Cell grid lines
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
         ctx.lineWidth = 0.5;
         for (let i = 1; i < 6; i++) {
@@ -2231,32 +2607,192 @@ function drawPanelLayout() {
           ctx.lineTo(x + panelW, y + j * panelH / 12);
           ctx.stroke();
         }
-
-        // Panel number
         panelNum++;
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.font = 'bold ' + Math.max(8, Math.min(12, panelW * 0.4)) + 'px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(panelNum, x + panelW / 2, y + panelH / 2);
+        placed++;
       }
     }
+
+    groupInfo.push({
+      mpptIdx: sl.mpptIdx,
+      count: sl.count,
+      left: startX,
+      right: startX + groupW,
+      center: startX + groupW / 2,
+      bottom: startY + sl.rows * (panelH + gap) - gap,
+      color, border,
+    });
     startX += groupW + stringGap;
   });
 
-  // Info text
+  // ── WIRING + INVERTER (Bottom region) ──
+  function splitIntoSubstrings(total, subs) {
+    if (subs <= 1) return [total];
+    const base = Math.floor(total / subs);
+    const rem = total - base * subs;
+    const arr = [];
+    for (let i = 0; i < subs; i++) arr.push(base + (i < rem ? 1 : 0));
+    return arr.filter(v => v > 0);
+  }
+
+  // Inverter box(es) at bottom
+  const invBoxGap = 28;
+  const invMargin = 30;
+  const invBoxW = Math.max(160, (W - invMargin * 2 - (invQty - 1) * invBoxGap) / invQty);
+  const totalInvW = invQty * invBoxW + (invQty - 1) * invBoxGap;
+  const invStartX = (W - totalInvW) / 2;
+
+  const mpptPorts = [];
+  for (let q = 0; q < invQty; q++) {
+    const ix = invStartX + q * (invBoxW + invBoxGap);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#37474F';
+    ctx.lineWidth = 2;
+    ctx.fillRect(ix, invTopY, invBoxW, invBoxH);
+    ctx.strokeRect(ix, invTopY, invBoxW, invBoxH);
+    // Diagonal separator
+    ctx.beginPath();
+    ctx.moveTo(ix, invTopY);
+    ctx.lineTo(ix + invBoxW, invTopY + invBoxH);
+    ctx.strokeStyle = '#CFD8DC';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // AC waveform
+    ctx.strokeStyle = '#37474F';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    const acX = ix + 8, acY = invTopY + 12;
+    for (let t = 0; t <= 30; t++) {
+      const ang = (t / 30) * Math.PI * 2;
+      const yy = acY + Math.sin(ang) * 5;
+      if (t === 0) ctx.moveTo(acX + t, yy); else ctx.lineTo(acX + t, yy);
+    }
+    ctx.stroke();
+    // Inverter label (inside)
+    ctx.fillStyle = '#37474F';
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((s.invTypeLabel || 'Hybrid').toUpperCase() + ' INVERTER' + (invQty > 1 ? ' ' + (q + 1) : ''), ix + invBoxW / 2, invTopY + invBoxH / 2 - 6);
+    ctx.font = '9px Segoe UI, sans-serif';
+    ctx.fillText('Solis ' + (s.invRated || '') + 'kW \u00b7 ' + mpptsPerInv + ' MPPTs', ix + invBoxW / 2, invTopY + invBoxH / 2 + 10);
+
+    // MPPT ports on top edge
+    const portSpacing = invBoxW / (mpptsPerInv + 1);
+    for (let m = 0; m < mpptsPerInv; m++) {
+      const globalIdx = q * mpptsPerInv + m;
+      if (globalIdx >= totalMppts) break;
+      const portX = ix + portSpacing * (m + 1);
+      const portY = invTopY;
+      const pc = mpptColors[globalIdx % mpptColors.length];
+      ctx.fillStyle = pc;
+      ctx.strokeStyle = pc;
+      ctx.beginPath();
+      ctx.arc(portX, portY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Port label inside the box
+      ctx.fillStyle = pc;
+      ctx.font = 'bold 8px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('MPPT' + (m + 1), portX, portY + 5);
+      mpptPorts.push({ x: portX, y: portY, globalIdx });
+    }
+  }
+
+  // Draw wiring from each MPPT panel group DOWN to its MPPT port
+  groupInfo.forEach(g => {
+    const port = mpptPorts.find(p => p.globalIdx === g.mpptIdx);
+    if (!port) return;
+    const subs = splitIntoSubstrings(g.count, stringsPerMppt);
+    const groupWidth = g.right - g.left;
+    const busY = g.bottom + 14;
+    const subRails = [];
+
+    ctx.strokeStyle = g.color;
+    ctx.lineWidth = 1.8;
+
+    if (subs.length <= 1) {
+      // Single bus bar across the whole group
+      ctx.beginPath();
+      ctx.moveTo(g.left + 4, busY);
+      ctx.lineTo(g.right - 4, busY);
+      ctx.stroke();
+      // Drop from panel bottom to bus
+      ctx.beginPath();
+      ctx.moveTo(g.center, g.bottom + 2);
+      ctx.lineTo(g.center, busY);
+      ctx.stroke();
+      subRails.push({ x: g.center });
+    } else {
+      const subW = groupWidth / subs.length;
+      subs.forEach((n, si) => {
+        const sxL = g.left + si * subW + 4;
+        const sxR = g.left + (si + 1) * subW - 4;
+        ctx.beginPath();
+        ctx.moveTo(sxL, busY);
+        ctx.lineTo(sxR, busY);
+        ctx.stroke();
+        const midX = (sxL + sxR) / 2;
+        // drop from panels
+        ctx.beginPath();
+        ctx.moveTo(midX, g.bottom + 2);
+        ctx.lineTo(midX, busY);
+        ctx.stroke();
+        // Label
+        ctx.fillStyle = g.color;
+        ctx.font = '9px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('String ' + (si + 1) + ': ' + n, midX, busY + 3);
+        subRails.push({ x: midX });
+      });
+    }
+
+    // Merge + route to MPPT port
+    const mergeY = port.y - 32;
+    const dropStartY = subRails.length > 1 ? busY + 14 : busY;
+
+    ctx.strokeStyle = g.color;
+    ctx.lineWidth = 1.8;
+    subRails.forEach(rail => {
+      ctx.beginPath();
+      ctx.moveTo(rail.x, dropStartY);
+      ctx.lineTo(rail.x, mergeY);
+      ctx.stroke();
+    });
+    if (subRails.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(subRails[0].x, mergeY);
+      ctx.lineTo(subRails[subRails.length - 1].x, mergeY);
+      ctx.stroke();
+    }
+    const midRailX = (subRails[0].x + subRails[subRails.length - 1].x) / 2;
+    ctx.beginPath();
+    ctx.moveTo(midRailX, mergeY);
+    ctx.lineTo(midRailX, (mergeY + port.y) / 2);
+    ctx.lineTo(port.x, (mergeY + port.y) / 2);
+    ctx.lineTo(port.x, port.y);
+    ctx.stroke();
+  });
+
+  // Info bar at bottom
   ctx.fillStyle = '#424242';
   ctx.font = '11px Segoe UI, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText(numPanels + ' x ' + (s.panelWattage || 620) + 'W = ' + s.systemKwp.toFixed(2) + ' kWp  |  Each: 1134 x 2382 mm', W / 2, H - 10);
+  ctx.fillText(numPanels + ' x ' + (s.panelWattage || 620) + 'W = ' + s.systemKwp.toFixed(2) + ' kWp  |  Each: 1134 x 2382 mm  |  Integrated Roof Panel Layout + MPPT Wiring', W / 2, H - 6);
 
-  // Update dimensions text
+  // Dimensions text
   const dimEl = document.getElementById('panelDimensions');
   if (dimEl) {
     const totalW_m = (stringLayouts.reduce((sum, sl) => sum + sl.cols, 0) * 1.134 + (stringLayouts.length - 1) * 0.3).toFixed(1);
     const totalH_m = (maxRows * 2.382).toFixed(1);
-    dimEl.textContent = 'Est. area: ' + totalW_m + 'm x ' + totalH_m + 'm — Colors indicate MPPT string assignment';
+    dimEl.textContent = 'Est. area: ' + totalW_m + 'm x ' + totalH_m + 'm — Colors = MPPT string assignment; wires route down to inverter';
   }
 }
 
@@ -2417,7 +2953,9 @@ function generateLayoutPDF() {
     const pw = mr - ml;
 
     const s = currentSystem;
-    const clientName = document.getElementById('clientName').value || 'Client Name';
+    const clientNameRaw = document.getElementById('clientName').value || 'Client Name';
+    const salutation = document.getElementById('clientSalutation').value || '';
+    const clientName = (salutation ? salutation + ' ' : '') + clientNameRaw;
     const quoteNo = document.getElementById('quoteNo').value || 'QTN-001';
     const address = document.getElementById('clientAddress').value || '';
     const projectType = document.getElementById('projectType').value;
@@ -2515,7 +3053,7 @@ function generateLayoutPDF() {
 
     specs.forEach(sp => { doc.text(sp, ml, y); y += 0.14; });
 
-    const filename = quoteNo + ' - ' + clientName + ' (Layout).pdf';
+    const filename = quoteNo + ' - ' + clientNameRaw + ' (Layout).pdf';
     doc.save(filename);
   } catch (err) {
     console.error('Layout PDF Error:', err);
@@ -2706,14 +3244,35 @@ function redrawRoofCanvas() {
     });
   }
 
+  // MPPT color palette (fills + borders) — matches Panel Layout section
+  const mpptFills = ['rgba(21,101,192,0.65)', 'rgba(0,137,123,0.65)', 'rgba(245,124,0,0.65)', 'rgba(123,31,162,0.65)', 'rgba(198,40,40,0.65)', 'rgba(46,125,50,0.65)'];
+  const mpptBorders = ['#0D47A1', '#00695C', '#E65100', '#4A148C', '#8E0000', '#1B5E20'];
+
+  // Build MPPT assignment map for each panel based on currentSystem.mpptStrings
+  const sCur = currentSystem;
+  const strings = (sCur && sCur.mpptStrings && sCur.mpptStrings.length > 0) ? sCur.mpptStrings : null;
+  function mpptFor(idx) {
+    if (!strings) return 0;
+    let cum = 0;
+    for (let i = 0; i < strings.length; i++) {
+      cum += strings[i];
+      if (idx < cum) return i;
+    }
+    return strings.length - 1;
+  }
+
   // Draw panels
   const scale = parseFloat(document.getElementById('roofScale').value) || 0.03;
+  const roofStringCenters = {}; // mpptIdx → [{x,y,idx}]
   roofPanels.forEach((p, i) => {
-    // Panel fill
-    ctx.fillStyle = 'rgba(21, 101, 192, 0.6)';
+    const mpptIdx = mpptFor(i);
+    if (!roofStringCenters[mpptIdx]) roofStringCenters[mpptIdx] = [];
+    roofStringCenters[mpptIdx].push({ x: p.x + p.w / 2, y: p.y + p.h / 2, idx: i });
+    // Panel fill color-coded by MPPT
+    ctx.fillStyle = mpptFills[mpptIdx % mpptFills.length];
     ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.strokeStyle = '#0D47A1';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = mpptBorders[mpptIdx % mpptBorders.length];
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(p.x, p.y, p.w, p.h);
 
     // Cell grid lines (subtle)
@@ -2733,12 +3292,42 @@ function redrawRoofCanvas() {
     }
 
     // Panel number
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.font = 'bold ' + Math.max(8, Math.min(12, p.w * 0.35)) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(i + 1, p.x + p.w / 2, p.y + p.h / 2);
   });
+
+  // MPPT legend (top-right of canvas) — shown when panels are placed
+  if (strings && roofPanels.length > 0) {
+    const padding = 6;
+    ctx.font = 'bold 10px sans-serif';
+    const labels = strings.map((n, i) => 'MPPT ' + (i + 1) + ' — ' + n + ' panels');
+    const lineH = 14;
+    const swatch = 10;
+    const labelW = Math.max(...labels.map(l => ctx.measureText(l).width));
+    const boxW = labelW + swatch + 14;
+    const boxH = labels.length * lineH + padding * 2;
+    const bx = canvas.width - boxW - 8;
+    const by = 8;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(bx, by, boxW, boxH);
+    ctx.strokeStyle = '#424242';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, boxW, boxH);
+    labels.forEach((lbl, i) => {
+      const ly = by + padding + i * lineH;
+      ctx.fillStyle = mpptFills[i % mpptFills.length];
+      ctx.fillRect(bx + padding, ly + 2, swatch, swatch);
+      ctx.strokeStyle = mpptBorders[i % mpptBorders.length];
+      ctx.strokeRect(bx + padding, ly + 2, swatch, swatch);
+      ctx.fillStyle = '#212121';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(lbl, bx + padding + swatch + 4, ly + 2);
+    });
+  }
 
   // Update panel count info
   const countEl = document.getElementById('roofPanelCount');
@@ -2747,7 +3336,8 @@ function redrawRoofCanvas() {
     const wattage = s.panelWattage || 620;
     if (roofPanels.length > 0) {
       const kwp = (roofPanels.length * wattage / 1000).toFixed(2);
-      countEl.textContent = roofPanels.length + ' panels placed (' + kwp + ' kWp) — Drag panels to adjust, right-click image to undo polygon point';
+      const mpptInfo = strings ? ' — Colors indicate MPPT string assignment' : '';
+      countEl.textContent = roofPanels.length + ' panels placed (' + kwp + ' kWp)' + mpptInfo;
     } else {
       countEl.textContent = '';
     }
@@ -2995,7 +3585,9 @@ function generateRoofPDF() {
     const pw = mr - ml;
 
     const s = currentSystem;
-    const clientName = document.getElementById('clientName').value || 'Client Name';
+    const clientNameRaw = document.getElementById('clientName').value || 'Client Name';
+    const salutation = document.getElementById('clientSalutation').value || '';
+    const clientName = (salutation ? salutation + ' ' : '') + clientNameRaw;
     const quoteNo = document.getElementById('quoteNo').value || 'QTN-001';
     const address = document.getElementById('clientAddress').value || '';
 
@@ -3046,18 +3638,22 @@ function generateRoofPDF() {
     const kwp = (roofPanels.length * wattage / 1000).toFixed(2);
     const orientation = document.getElementById('panelOrientation').value;
     const scaleVal = document.getElementById('roofScale').value;
+    const mpptText = (s.mpptStrings && s.mpptStrings.length > 0)
+      ? s.mpptStrings.map((n, i) => 'MPPT ' + (i + 1) + ': ' + n + ' panels').join(' | ')
+      : 'N/A';
     const notes = [
       'Roof Panel Layout Notes:',
       '\u2022 Panels placed: ' + roofPanels.length + ' x ' + wattage + 'W = ' + kwp + ' kWp',
       '\u2022 Panel size: ' + PANEL_MM_W + ' x ' + PANEL_MM_H + ' mm (' + orientation + ' orientation)',
       '\u2022 Scale: ' + scaleVal + ' m/px — Panel gap: 50mm',
-      '\u2022 Blue rectangles represent individual solar panel positions',
+      '\u2022 MPPT distribution: ' + mpptText,
+      '\u2022 Colored rectangles indicate MPPT string assignment (see legend on layout)',
       '\u2022 Actual installation subject to site survey and structural assessment',
       '\u2022 Roof area shown is approximate — professional measurement recommended',
     ];
     notes.forEach(n => { doc.text(n, ml, y); y += 0.14; });
 
-    const filename = quoteNo + ' - ' + clientName + ' (Roof Layout).pdf';
+    const filename = quoteNo + ' - ' + clientNameRaw + ' (Roof Layout).pdf';
     doc.save(filename);
   } catch (err) {
     console.error('Roof PDF Error:', err);
