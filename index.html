@@ -425,19 +425,19 @@ body {
         </div>
         <div class="form-group">
           <label>Battery Cost (PHP)</label>
-          <input type="number" id="battCost" value="90000" step="1000" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="battCost" value="120000" step="1000" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>1st Unit Sell Price (PHP)</label>
-          <input type="number" id="battPrice1" value="135000" step="1000" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="battPrice1" value="150000" step="1000" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Additional Unit Sell Price (PHP)</label>
-          <input type="number" id="battPriceN" value="125000" step="1000" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="battPriceN" value="140000" step="1000" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group full-span">
           <label>Battery Description</label>
-          <input type="text" id="battDesc" value="Alltopelec Lithium Battery 51.2V 324Ah" class="input-yellow">
+          <input type="text" id="battDesc" value="Alltopelec Lithium Battery 51.2V 324Ah" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'">
         </div>
       </div>
 
@@ -659,7 +659,7 @@ body {
         </div>
         <div class="form-group">
           <label>Inv. Qty</label>
-          <input type="number" id="overrideInverterQty" value="0" min="0" max="10" step="1" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="overrideInverterQty" value="1" min="1" max="10" step="1" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Batteries</label>
@@ -861,9 +861,9 @@ const CS_LOGO = 'iVBORw0KGgoAAAANSUhEUgAABOIAAAGQCAIAAACMNlh8AADcqklEQVR4nOz9d5A
 const defaultInverters = [
   { key: '5K',  rated: 5,  maxPv: 8.0,  mppt: 2, strings: 2, maxPanels: 10, cost: 39000,  desc: 'Solis 5kW Hybrid Inverter 220V, Single Phase' },
   { key: '8K',  rated: 8,  maxPv: 12.8, mppt: 2, strings: 4, maxPanels: 16, cost: 58000,  desc: 'Solis 8kW Hybrid Inverter 220V, Single Phase' },
-  { key: '12K', rated: 12, maxPv: 19.2, mppt: 3, strings: 6, maxPanels: 21, cost: 80000,  desc: 'Solis 12kW Hybrid Inverter 220V, Single Phase' },
-  { key: '16K', rated: 16, maxPv: 25.6, mppt: 3, strings: 6, maxPanels: 30, cost: 111000, desc: 'Solis 16kW Hybrid Inverter 220V, Single Phase' },
-  { key: '18K', rated: 18, maxPv: 28.8, mppt: 3, strings: 6, maxPanels: 36, cost: 125000, desc: 'Solis 18kW Hybrid Inverter 220V, Single Phase' },
+  { key: '12K', rated: 12, maxPv: 24.0, mppt: 3, strings: 6, maxPanels: 36, cost: 80000,  desc: 'Solis 12kW Hybrid Inverter 220V, Single Phase' },
+  { key: '16K', rated: 16, maxPv: 32.0, mppt: 3, strings: 6, maxPanels: 48, cost: 111000, desc: 'Solis 16kW Hybrid Inverter 220V, Single Phase' },
+  { key: '18K', rated: 18, maxPv: 36.0, mppt: 3, strings: 6, maxPanels: 54, cost: 125000, desc: 'Solis 18kW Hybrid Inverter 220V, Single Phase' },
 ];
 
 function getInverterTypeFactor() {
@@ -962,8 +962,15 @@ function recalcAll() {
   const battUsable = battKwh * 0.90;
   document.getElementById('battKwh').value = battKwh.toFixed(1) + ' kWh';
 
-  const battPrice1 = parseFloat(document.getElementById('battPrice1').value) || 135000;
-  const battPriceN = parseFloat(document.getElementById('battPriceN').value) || 125000;
+  // Auto-update battery description when voltage or capacity changes
+  const battDescEl = document.getElementById('battDesc');
+  const battDescDefault = 'Alltopelec Lithium Battery ' + battV + 'V ' + battAh + 'Ah';
+  if (battDescEl.dataset.auto !== 'false') {
+    battDescEl.value = battDescDefault;
+  }
+
+  const battPrice1 = parseFloat(document.getElementById('battPrice1').value) || 150000;
+  const battPriceN = parseFloat(document.getElementById('battPriceN').value) || 140000;
 
   // Labor & Other Cost (values computed later based on system kWp once panels determined)
   let wiringCost = parseFloat(document.getElementById('wiringCost').value) || 0;
@@ -994,13 +1001,13 @@ function recalcAll() {
   const laborEl = document.getElementById('laborCost');
   const laborMainEl = document.getElementById('laborCostMain');
   if (wiringEl.dataset.auto !== 'false') {
-    const autoWiring = Math.round(systemKwp * 2500);
+    const autoWiring = Math.round(systemKwp * 3500);
     wiringEl.value = autoWiring;
     wiringMainEl.value = autoWiring;
     wiringCost = autoWiring;
   }
   if (laborEl.dataset.auto !== 'false') {
-    const autoLabor = Math.round(systemKwp * 1750);
+    const autoLabor = Math.round(systemKwp * 2450);
     laborEl.value = autoLabor;
     laborMainEl.value = autoLabor;
     laborCost = autoLabor;
@@ -1009,7 +1016,7 @@ function recalcAll() {
   // Inverter
   const overrideInv = document.getElementById('overrideInverter').value;
   const inverterQtyRaw = parseInt(document.getElementById('overrideInverterQty').value);
-  const inverterQty = isNaN(inverterQtyRaw) ? 0 : inverterQtyRaw;
+  const inverterQty = (isNaN(inverterQtyRaw) || inverterQtyRaw < 1) ? 1 : inverterQtyRaw;
   let selectedInvIdx = -1;
   if (overrideInv) {
     selectedInvIdx = defaultInverters.findIndex(inv => inv.key === overrideInv);
@@ -1113,6 +1120,52 @@ function recalcAll() {
   }
   const systemKwpFinal = numPanels * panelWattage / 1000;
 
+  // ── Recalculate wiring/labor/pricing using final (post-MPPT) values ──
+  if (wiringEl.dataset.auto !== 'false') {
+    const autoWiringFinal = Math.round(systemKwpFinal * 3500);
+    wiringEl.value = autoWiringFinal;
+    wiringMainEl.value = autoWiringFinal;
+    wiringCost = autoWiringFinal;
+  }
+  if (laborEl.dataset.auto !== 'false') {
+    const autoLaborFinal = Math.round(systemKwpFinal * 2450);
+    laborEl.value = autoLaborFinal;
+    laborMainEl.value = autoLaborFinal;
+    laborCost = autoLaborFinal;
+  }
+  // Recalculate pricing with final panel count
+  const panelTotalFinal = numPanels * panelPrice;
+  const otherCostFinal = (panelPrice * (otherCostRate / 100)) * numPanels;
+  document.getElementById('otherCostPerPanel').value = 'PHP ' + fmtNum(panelPrice * (otherCostRate / 100)) + ' / panel';
+  document.getElementById('otherCostTotal').value = 'PHP ' + fmtNum(otherCostFinal);
+  const rawSubtotalFinal = panelTotalFinal + inverterTotal + batteryTotal + wiringCost + laborCost + otherCostFinal;
+  // Recalculate discount
+  discountAmount = 0;
+  discountPct = 0;
+  if (discountType === 'round' && rawSubtotalFinal > 0) {
+    const rounded = Math.floor(rawSubtotalFinal / 1000) * 1000;
+    discountAmount = rawSubtotalFinal - rounded;
+    discountPct = (discountAmount / rawSubtotalFinal) * 100;
+  } else if (discountType === 'custom' && rawSubtotalFinal > 0) {
+    discountPct = parseFloat(document.getElementById('customDiscountPct').value) || 0;
+    discountAmount = rawSubtotalFinal * (discountPct / 100);
+  } else if (discountType === 'customAmount' && rawSubtotalFinal > 0) {
+    discountAmount = parseFloat(document.getElementById('customDiscountAmt').value) || 0;
+    discountPct = (discountAmount / rawSubtotalFinal) * 100;
+  }
+  const subtotalFinal = rawSubtotalFinal - discountAmount;
+  const vatAmountFinal = includeVat ? subtotalFinal * 0.12 : 0;
+  const receiptAmountFinal = includeReceipt ? subtotalFinal * 0.02 : 0;
+  const grandTotalFinal = subtotalFinal + vatAmountFinal + receiptAmountFinal;
+  // Recalculate savings
+  const dailyGenFinal = numPanels * dailyKwhPanel;
+  const monthlyGenSolarFinal = dailyGenFinal * 30;
+  const batteryMonthlyKwhFinal = (includeBattery && numBatteries > 0) ? numBatteries * 495 : 0;
+  const monthlyGenFinal = monthlyGenSolarFinal + batteryMonthlyKwhFinal;
+  const monthlySavingsFinal = Math.min(monthlyGenFinal * rateKwh, monthlyBill * (targetOffset / 100));
+  const yearlySavingsFinal = monthlySavingsFinal * 12;
+  const roiYearsFinal = yearlySavingsFinal > 0 ? grandTotalFinal / yearlySavingsFinal : 0;
+
   // Build MPPT string allocation across all inverters
   const mpptStrings = [];
   const totalMppts = invMppt;
@@ -1156,42 +1209,42 @@ function recalcAll() {
     document.getElementById('calcMppt').style.fontWeight = '600';
   }
 
-  // Update line items table
-  updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach, invSell, inverterQty, numBatteries, batteryTotal,
-    wiringCost, laborCost, otherCost, discountAmount, discountPct, subtotal, vatAmount, receiptAmount, grandTotal, systemKwpFinal, includeBattery);
+  // Update line items table (using post-MPPT final values)
+  updateLineItems(numPanels, panelPrice, panelTotalFinal, invDesc, invSellEach, invSell, inverterQty, numBatteries, batteryTotal,
+    wiringCost, laborCost, otherCostFinal, discountAmount, discountPct, subtotalFinal, vatAmountFinal, receiptAmountFinal, grandTotalFinal, systemKwpFinal, includeBattery);
 
   // Update summary
-  document.getElementById('grandTotalDisplay').textContent = 'PHP ' + fmtNum(subtotal);
-  if (vatAmount > 0 || receiptAmount > 0) {
+  document.getElementById('grandTotalDisplay').textContent = 'PHP ' + fmtNum(subtotalFinal);
+  if (vatAmountFinal > 0 || receiptAmountFinal > 0) {
     let extra = [];
-    if (vatAmount > 0) extra.push('VAT: PHP ' + fmtNum(vatAmount));
-    if (receiptAmount > 0) extra.push('Receipt: PHP ' + fmtNum(receiptAmount));
-    document.getElementById('grandTotalWithVat').textContent = extra.join(' + ') + ' = Total: PHP ' + fmtNum(grandTotal);
+    if (vatAmountFinal > 0) extra.push('VAT: PHP ' + fmtNum(vatAmountFinal));
+    if (receiptAmountFinal > 0) extra.push('Receipt: PHP ' + fmtNum(receiptAmountFinal));
+    document.getElementById('grandTotalWithVat').textContent = extra.join(' + ') + ' = Total: PHP ' + fmtNum(grandTotalFinal);
   } else {
     document.getElementById('grandTotalWithVat').textContent = 'Price is VAT exclusive';
   }
 
   // Bill comparison
-  const newBill = Math.max(monthlyBill - monthlySavings, 0);
+  const newBill = Math.max(monthlyBill - monthlySavingsFinal, 0);
   document.getElementById('statCurrentBill').textContent = 'PHP ' + fmtInt(monthlyBill);
   document.getElementById('statNewBill').textContent = 'PHP ' + fmtInt(newBill);
-  document.getElementById('statKwhMonth').textContent = fmtInt(monthlyGen);
-  document.getElementById('statMonthlySave').textContent = 'PHP ' + fmtInt(monthlySavings);
+  document.getElementById('statKwhMonth').textContent = fmtInt(monthlyGenFinal);
+  document.getElementById('statMonthlySave').textContent = 'PHP ' + fmtInt(monthlySavingsFinal);
 
-  document.getElementById('statMonthly').textContent = 'PHP ' + fmtK(monthlySavings);
-  document.getElementById('statYearly').textContent = 'PHP ' + fmtK(yearlySavings);
-  document.getElementById('statRoi').textContent = roiYears.toFixed(1);
-  document.getElementById('stat25yr').textContent = 'PHP ' + fmtK(yearlySavings * 25);
+  document.getElementById('statMonthly').textContent = 'PHP ' + fmtK(monthlySavingsFinal);
+  document.getElementById('statYearly').textContent = 'PHP ' + fmtK(yearlySavingsFinal);
+  document.getElementById('statRoi').textContent = roiYearsFinal.toFixed(1);
+  document.getElementById('stat25yr').textContent = 'PHP ' + fmtK(yearlySavingsFinal * 25);
 
-  // Store for PDF
+  // Store for PDF (using post-MPPT final values)
   currentSystem = {
-    numPanels, systemKwp: systemKwpFinal, panelPrice, panelTotal, panelWattage,
+    numPanels, systemKwp: systemKwpFinal, panelPrice, panelTotal: panelTotalFinal, panelWattage,
     invKey, invDesc, invSellEach, invSell, inverterTotal, inverterQty, invTypeLabel,
     numBatteries, batteryTotal, includeBattery,
-    wiringCost, laborCost, otherCost, otherCostRate, discountAmount, discountPct,
-    subtotal, vatAmount, receiptAmount, grandTotal,
-    monthlySavings, yearlySavings, roiYears,
-    monthlyKwh, dailyKwh, dailyGen, monthlyGen, battPrice1, battPriceN,
+    wiringCost, laborCost, otherCost: otherCostFinal, otherCostRate, discountAmount, discountPct, discountType,
+    subtotal: subtotalFinal, vatAmount: vatAmountFinal, receiptAmount: receiptAmountFinal, grandTotal: grandTotalFinal,
+    monthlySavings: monthlySavingsFinal, yearlySavings: yearlySavingsFinal, roiYears: roiYearsFinal,
+    monthlyKwh, dailyKwh, dailyGen: dailyGenFinal, monthlyGen: monthlyGenFinal, battPrice1, battPriceN,
     invMppt: invMpptEach, invMpptTotal: invMppt, panelsPerMppt, maxPanelsTotal, mpptStrings,
     invRated: defaultInverters[selectedInvIdx].rated,
     invStringsEach: defaultInverters[selectedInvIdx].strings,
@@ -1516,7 +1569,9 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
   }
 
   if (discountAmount > 0) {
-    rows += `<tr><td style="color:#4CAF50;">Discount (${discountPct.toFixed(2)}%)</td><td></td><td></td><td style="color:#4CAF50;">-${fmtNum(discountAmount)}</td></tr>`;
+    const dtType = document.getElementById('discountType').value;
+    const dtLabel = (dtType === 'round') ? 'Discount' : `Discount (${discountPct.toFixed(2)}%)`;
+    rows += `<tr><td style="color:#4CAF50;">${dtLabel}</td><td></td><td></td><td style="color:#4CAF50;">-${fmtNum(discountAmount)}</td></tr>`;
   }
 
   rows += `<tr class="total-row"><td colspan="3" style="text-align:right;padding-right:16px;">SUBTOTAL</td><td>${fmtNum(subtotal)}</td></tr>`;
@@ -1728,7 +1783,8 @@ function generatePDF() {
   if (s.discountAmount > 0) {
     const rowH = 0.20;
     doc.setTextColor(0, 137, 123);
-    doc.text('Discount (' + s.discountPct.toFixed(2) + '%)', ml + 0.04, y + 0.14);
+    const discountLabel = (s.discountType === 'round') ? 'Discount' : 'Discount (' + s.discountPct.toFixed(2) + '%)';
+    doc.text(discountLabel, ml + 0.04, y + 0.14);
     doc.text('-' + fmtNum(s.discountAmount), ml + pw - 0.04, y + 0.14, { align: 'right' });
     doc.setTextColor(0, 0, 0);
     y += rowH + 0.08;
@@ -2024,7 +2080,8 @@ function generatePDF2() {
 
   if (s.discountAmount > 0) {
     doc.setTextColor(0, 137, 123);
-    doc.text('Discount (' + s.discountPct.toFixed(2) + '%)', ml + 0.04, y + 0.14);
+    const discountLabel2 = (s.discountType === 'round') ? 'Discount' : 'Discount (' + s.discountPct.toFixed(2) + '%)';
+    doc.text(discountLabel2, ml + 0.04, y + 0.14);
     doc.setTextColor(0, 0, 0);
     y += 0.28;
   }
