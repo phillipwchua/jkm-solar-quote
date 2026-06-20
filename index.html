@@ -1001,13 +1001,13 @@ function recalcAll() {
   const laborEl = document.getElementById('laborCost');
   const laborMainEl = document.getElementById('laborCostMain');
   if (wiringEl.dataset.auto !== 'false') {
-    const autoWiring = Math.round(systemKwp * 3500);
+    const autoWiring = Math.ceil(systemKwp * 3500 / 100) * 100;
     wiringEl.value = autoWiring;
     wiringMainEl.value = autoWiring;
     wiringCost = autoWiring;
   }
   if (laborEl.dataset.auto !== 'false') {
-    const autoLabor = Math.round(systemKwp * 2450);
+    const autoLabor = Math.ceil(systemKwp * 2450 / 100) * 100;
     laborEl.value = autoLabor;
     laborMainEl.value = autoLabor;
     laborCost = autoLabor;
@@ -1060,7 +1060,7 @@ function recalcAll() {
 
   // Other cost: rate % of panel selling price, per panel
   const otherCostPerPanel = panelPrice * (otherCostRate / 100);
-  const otherCost = otherCostPerPanel * numPanels;
+  const otherCost = Math.ceil(otherCostPerPanel * numPanels / 100) * 100;
   document.getElementById('otherCostPerPanel').value = 'PHP ' + fmtNum(otherCostPerPanel) + ' / panel';
   document.getElementById('otherCostTotal').value = 'PHP ' + fmtNum(otherCost);
 
@@ -1122,20 +1122,20 @@ function recalcAll() {
 
   // ── Recalculate wiring/labor/pricing using final (post-MPPT) values ──
   if (wiringEl.dataset.auto !== 'false') {
-    const autoWiringFinal = Math.round(systemKwpFinal * 3500);
+    const autoWiringFinal = Math.ceil(systemKwpFinal * 3500 / 100) * 100;
     wiringEl.value = autoWiringFinal;
     wiringMainEl.value = autoWiringFinal;
     wiringCost = autoWiringFinal;
   }
   if (laborEl.dataset.auto !== 'false') {
-    const autoLaborFinal = Math.round(systemKwpFinal * 2450);
+    const autoLaborFinal = Math.ceil(systemKwpFinal * 2450 / 100) * 100;
     laborEl.value = autoLaborFinal;
     laborMainEl.value = autoLaborFinal;
     laborCost = autoLaborFinal;
   }
   // Recalculate pricing with final panel count
   const panelTotalFinal = numPanels * panelPrice;
-  const otherCostFinal = (panelPrice * (otherCostRate / 100)) * numPanels;
+  const otherCostFinal = Math.ceil((panelPrice * (otherCostRate / 100)) * numPanels / 100) * 100;
   document.getElementById('otherCostPerPanel').value = 'PHP ' + fmtNum(panelPrice * (otherCostRate / 100)) + ' / panel';
   document.getElementById('otherCostTotal').value = 'PHP ' + fmtNum(otherCostFinal);
   const rawSubtotalFinal = panelTotalFinal + inverterTotal + batteryTotal + wiringCost + laborCost + otherCostFinal;
