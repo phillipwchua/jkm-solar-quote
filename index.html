@@ -444,11 +444,11 @@ body {
       <h4 style="margin: 16px 0 8px; color: var(--teal-dark);">Labor &amp; Other Costs</h4>
       <div class="form-grid three-col">
         <div class="form-group">
-          <label>Electrical Installation Labor (PHP)</label>
+          <label>Electrical Installation (PHP)</label>
           <input type="number" id="wiringCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCostMain').dataset.auto='false'; recalcAll()">
         </div>
         <div class="form-group">
-          <label>Solar Panel Installation Labor (PHP)</label>
+          <label>Solar Panel Installation (PHP)</label>
           <input type="number" id="laborCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCostMain').dataset.auto='false'; recalcAll()">
         </div>
         <div class="form-group">
@@ -710,11 +710,11 @@ body {
       <h4 style="margin: 16px 0 8px; color: var(--teal-dark); font-size: 13px;">Installation &amp; Accessories</h4>
       <div class="form-grid three-col">
         <div class="form-group">
-          <label>Electrical Installation Labor (PHP)</label>
+          <label>Electrical Installation (PHP)</label>
           <input type="number" id="wiringCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
         </div>
         <div class="form-group">
-          <label>Solar Panel Installation Labor (PHP)</label>
+          <label>Solar Panel Installation (PHP)</label>
           <input type="number" id="laborCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
         </div>
         <div class="form-group">
@@ -1552,15 +1552,19 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
     rows += `<tr><td>${battDesc}</td><td>${numBatteries} unit(s)</td><td>${fmtNum(battUnit)}</td><td>${fmtNum(batteryTotal)}</td></tr>`;
   }
 
+  // Complete Installation & Commissioning — parent header
+  if (wiringCost > 0 || laborCost > 0) {
+    rows += `<tr><td><strong>Complete Installation & Commissioning</strong></td><td></td><td></td><td></td></tr>`;
+  }
   if (wiringCost > 0) {
-    rows += `<tr><td>Electrical Installation Labor</td><td>1 lot</td><td>${fmtNum(wiringCost)}</td><td>${fmtNum(wiringCost)}</td></tr>`;
+    rows += `<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Electrical Installation</td><td>1 lot</td><td>${fmtNum(wiringCost)}</td><td>${fmtNum(wiringCost)}</td></tr>`;
   } else {
-    rows += `<tr><td>Electrical Installation Labor</td><td>1 lot</td><td style="color:#9E9E9E">Inclusive</td><td style="color:#9E9E9E">Inclusive</td></tr>`;
+    rows += `<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Electrical Installation</td><td>1 lot</td><td style="color:#9E9E9E">Inclusive</td><td style="color:#9E9E9E">Inclusive</td></tr>`;
   }
   if (laborCost > 0) {
-    rows += `<tr><td>Solar Panel Installation Labor — Complete Installation & Commissioning</td><td>1 lot</td><td>${fmtNum(laborCost)}</td><td>${fmtNum(laborCost)}</td></tr>`;
+    rows += `<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Solar Panel Installation</td><td>1 lot</td><td>${fmtNum(laborCost)}</td><td>${fmtNum(laborCost)}</td></tr>`;
   } else {
-    rows += `<tr><td>Solar Panel Installation Labor — Complete Installation & Commissioning</td><td>1 lot</td><td style="color:#9E9E9E">Inclusive</td><td style="color:#9E9E9E">Inclusive</td></tr>`;
+    rows += `<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Solar Panel Installation</td><td>1 lot</td><td style="color:#9E9E9E">Inclusive</td><td style="color:#9E9E9E">Inclusive</td></tr>`;
   }
 
   if (otherCost > 0) {
@@ -1752,19 +1756,25 @@ function generatePDF() {
     y += rowH + 0.08;
   });
 
-  // Wiring & Labor line items (if custom amounts set)
+  // Complete Installation & Commissioning — parent header + sub-items
+  if (s.wiringCost > 0 || s.laborCost > 0) {
+    const rowH = 0.20;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Complete Installation & Commissioning', ml + 0.04, y + 0.14);
+    doc.setFont('helvetica', 'normal');
+    y += rowH + 0.04;
+  }
   if (s.wiringCost > 0) {
     const rowH = 0.20;
-    doc.text('Electrical Installation Labor', ml + 0.04, y + 0.14);
+    doc.text('    Electrical Installation', ml + 0.04, y + 0.14);
     doc.text('1 lot', ml + colW[0] + colW[1] / 2, y + 0.14, { align: 'center' });
     doc.text(fmtNum(s.wiringCost), ml + colW[0] + colW[1] + colW[2] - 0.04, y + 0.14, { align: 'right' });
     doc.text(fmtNum(s.wiringCost), ml + pw - 0.04, y + 0.14, { align: 'right' });
     y += rowH + 0.08;
   }
-
   if (s.laborCost > 0) {
     const rowH = 0.20;
-    doc.text('Solar Panel Installation Labor - Complete Installation & Commissioning', ml + 0.04, y + 0.14);
+    doc.text('    Solar Panel Installation', ml + 0.04, y + 0.14);
     doc.text('1 lot', ml + colW[0] + colW[1] / 2, y + 0.14, { align: 'center' });
     doc.text(fmtNum(s.laborCost), ml + colW[0] + colW[1] + colW[2] - 0.04, y + 0.14, { align: 'right' });
     doc.text(fmtNum(s.laborCost), ml + pw - 0.04, y + 0.14, { align: 'right' });
@@ -1798,7 +1808,7 @@ function generatePDF() {
     doc.text('Labor for installation is inclusive', ml + 0.04, y);
     y += 0.18;
   } else if (s.wiringCost === 0) {
-    doc.text('Electrical installation labor is inclusive', ml + 0.04, y);
+    doc.text('Electrical installation is inclusive', ml + 0.04, y);
     y += 0.18;
   } else if (s.laborCost === 0) {
     doc.text('Labor for installation is inclusive', ml + 0.04, y);
@@ -2059,15 +2069,20 @@ function generatePDF2() {
     y += rowH + 0.08;
   });
 
-  // Wiring & Labor line items (no amounts shown)
+  // Complete Installation & Commissioning — parent header + sub-items (no amounts shown)
+  if (s.wiringCost > 0 || s.laborCost > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Complete Installation & Commissioning', ml + 0.04, y + 0.14);
+    doc.setFont('helvetica', 'normal');
+    y += 0.24;
+  }
   if (s.wiringCost > 0) {
-    doc.text('Electrical Installation Labor', ml + 0.04, y + 0.14);
+    doc.text('    Electrical Installation', ml + 0.04, y + 0.14);
     doc.text('1 lot', ml + colW2[0] + colW2[1] / 2, y + 0.14, { align: 'center' });
     y += 0.28;
   }
-
   if (s.laborCost > 0) {
-    doc.text('Solar Panel Installation Labor - Complete Installation & Commissioning', ml + 0.04, y + 0.14);
+    doc.text('    Solar Panel Installation', ml + 0.04, y + 0.14);
     doc.text('1 lot', ml + colW2[0] + colW2[1] / 2, y + 0.14, { align: 'center' });
     y += 0.28;
   }
@@ -2094,7 +2109,7 @@ function generatePDF2() {
     doc.text('Labor for installation is inclusive', ml + 0.04, y);
     y += 0.18;
   } else if (s.wiringCost === 0) {
-    doc.text('Electrical installation labor is inclusive', ml + 0.04, y);
+    doc.text('Electrical installation is inclusive', ml + 0.04, y);
     y += 0.18;
   } else if (s.laborCost === 0) {
     doc.text('Labor for installation is inclusive', ml + 0.04, y);
