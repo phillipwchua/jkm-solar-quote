@@ -445,11 +445,11 @@ body {
       <div class="form-grid three-col">
         <div class="form-group">
           <label>Electrical Installation (PHP)</label>
-          <input type="number" id="wiringCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCostMain').dataset.auto='false'; recalcAll()">
+          <input type="number" id="wiringCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="if(!this.value||this.value==='0'){this.dataset.auto='true';document.getElementById('wiringCostMain').dataset.auto='true';}else{this.dataset.auto='false';document.getElementById('wiringCostMain').dataset.auto='false';} recalcAll()">
         </div>
         <div class="form-group">
           <label>Solar Panel Installation (PHP)</label>
-          <input type="number" id="laborCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCostMain').dataset.auto='false'; recalcAll()">
+          <input type="number" id="laborCost" value="0" step="100" class="input-yellow" data-auto="true" oninput="if(!this.value||this.value==='0'){this.dataset.auto='true';document.getElementById('laborCostMain').dataset.auto='true';}else{this.dataset.auto='false';document.getElementById('laborCostMain').dataset.auto='false';} recalcAll()">
         </div>
         <div class="form-group">
           <label>Wiring, Acc. &amp; Other Mat. Rate (%)</label>
@@ -711,11 +711,11 @@ body {
       <div class="form-grid three-col">
         <div class="form-group">
           <label>Electrical Installation (PHP)</label>
-          <input type="number" id="wiringCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('wiringCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
+          <input type="number" id="wiringCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="if(!this.value||this.value==='0'){this.dataset.auto='true';document.getElementById('wiringCost').dataset.auto='true';}else{this.dataset.auto='false';document.getElementById('wiringCost').dataset.auto='false';} syncWiringLabor(); recalcAll()" placeholder="Auto (₱/kWp)">
         </div>
         <div class="form-group">
           <label>Solar Panel Installation (PHP)</label>
-          <input type="number" id="laborCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="this.dataset.auto='false'; document.getElementById('laborCost').dataset.auto='false'; syncWiringLabor(); recalcAll()" placeholder="Auto">
+          <input type="number" id="laborCostMain" value="0" step="500" class="input-yellow" data-auto="true" oninput="if(!this.value||this.value==='0'){this.dataset.auto='true';document.getElementById('laborCost').dataset.auto='true';}else{this.dataset.auto='false';document.getElementById('laborCost').dataset.auto='false';} syncWiringLabor(); recalcAll()" placeholder="Auto (₱/kWp)">
         </div>
         <div class="form-group">
           <label>Wiring, Accessories &amp; Other Materials Costs Rate (%)</label>
