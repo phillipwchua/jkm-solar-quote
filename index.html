@@ -382,7 +382,7 @@ body {
         </div>
         <div class="form-group">
           <label>Peak Sun Hours (hrs/day)</label>
-          <input type="number" id="peakSunHours" value="5.5" step="0.1" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="peakSunHours" value="3.33" step="0.01" class="input-yellow" oninput="recalcAll()"></div><div class="form-group"><label>Performance Ratio / Derate (%)</label><input type="number" id="performanceRatio" value="80" step="1" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Panel Wattage (W)</label>
@@ -951,7 +951,7 @@ function recalcAll() {
   const rateKwh = parseFloat(document.getElementById('rateKwh').value) || 0;
   const targetOffset = parseFloat(document.getElementById('targetOffset').value) || 100;
   const includeBattery = document.getElementById('includeBattery').value === 'yes';
-  const peakSunHours = parseFloat(document.getElementById('peakSunHours').value) || 5.5;
+  const peakSunHours = parseFloat(document.getElementById('peakSunHours').value) || 3.33; const performanceRatio = (parseFloat(document.getElementById('performanceRatio').value) || 80) / 100;
   const panelWattage = parseFloat(document.getElementById('panelWattage').value) || 620;
   const panelPrice = parseFloat(document.getElementById('panelSellingPrice').value) || 10000;
 
@@ -981,7 +981,7 @@ function recalcAll() {
   const monthlyKwh = rateKwh > 0 ? monthlyBill / rateKwh : 0;
   const targetKwh = monthlyKwh * (targetOffset / 100);
   const dailyKwh = targetKwh / 30;
-  const dailyKwhPanel = (panelWattage / 1000) * peakSunHours;
+  const dailyKwhPanel = (panelWattage / 1000) * peakSunHours * performanceRatio;
 
   document.getElementById('monthlyKwh').value = monthlyKwh.toFixed(1);
   document.getElementById('targetKwh').value = targetKwh.toFixed(1);
@@ -2300,7 +2300,7 @@ function getProjectData() {
     // Constants
     exchangeRate: document.getElementById('exchangeRate').value,
     inverterMarkup: document.getElementById('inverterMarkup').value,
-    peakSunHours: document.getElementById('peakSunHours').value,
+    peakSunHours: document.getElementById('peakSunHours').value, performanceRatio: document.getElementById('performanceRatio').value,
     panelWattage: document.getElementById('panelWattage').value,
     panelSellingPrice: document.getElementById('panelSellingPrice').value,
     panelDesc: document.getElementById('panelDesc').value,
@@ -2502,7 +2502,7 @@ function applyProjectData(data) {
   // Constants
   if (data.exchangeRate !== undefined) document.getElementById('exchangeRate').value = data.exchangeRate;
   if (data.inverterMarkup !== undefined) document.getElementById('inverterMarkup').value = data.inverterMarkup;
-  if (data.peakSunHours !== undefined) document.getElementById('peakSunHours').value = data.peakSunHours;
+  if (data.peakSunHours !== undefined) document.getElementById('peakSunHours').value = data.peakSunHours; if (data.performanceRatio !== undefined) document.getElementById('performanceRatio').value = data.performanceRatio;
   if (data.panelWattage !== undefined) document.getElementById('panelWattage').value = data.panelWattage;
   if (data.panelSellingPrice !== undefined) document.getElementById('panelSellingPrice').value = data.panelSellingPrice;
   if (data.panelDesc !== undefined) document.getElementById('panelDesc').value = data.panelDesc;
