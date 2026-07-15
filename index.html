@@ -382,7 +382,7 @@ body {
         </div>
         <div class="form-group">
           <label>Peak Sun Hours (hrs/day)</label>
-          <input type="number" id="peakSunHours" value="3.33" step="0.01" class="input-yellow" oninput="recalcAll()"></div><div class="form-group"><label>Performance Ratio / Derate (%)</label><input type="number" id="performanceRatio" value="80" step="1" class="input-yellow" oninput="recalcAll()">
+          <input type="number" id="peakSunHours" value="5.5" step="0.1" class="input-yellow" oninput="recalcAll()">
         </div>
         <div class="form-group">
           <label>Panel Wattage (W)</label>
@@ -608,6 +608,7 @@ body {
           <label>Include Battery?</label>
           <select id="includeBattery" class="input-yellow" onchange="recalcAll()">
             <option value="yes">Yes</option>
+            <option value="optional">Optional</option>
             <option value="no">No</option>
           </select>
         </div>
@@ -650,6 +651,7 @@ body {
           <label>Inverter</label>
           <select id="overrideInverter" class="input-yellow" onchange="recalcAll()">
             <option value="">Auto</option>
+            <option value="none">None</option>
             <option value="5K">5kW</option>
             <option value="8K">8kW</option>
             <option value="12K">12kW</option>
@@ -950,8 +952,10 @@ function recalcAll() {
   const monthlyBill = parseFloat(document.getElementById('monthlyBill').value) || 0;
   const rateKwh = parseFloat(document.getElementById('rateKwh').value) || 0;
   const targetOffset = parseFloat(document.getElementById('targetOffset').value) || 100;
-  const includeBattery = document.getElementById('includeBattery').value === 'yes';
-  const peakSunHours = parseFloat(document.getElementById('peakSunHours').value) || 3.33; const performanceRatio = (parseFloat(document.getElementById('performanceRatio').value) || 80) / 100;
+  const batteryMode = document.getElementById('includeBattery').value; // 'yes', 'no', 'optional'
+  const includeBattery = batteryMode === 'yes' || batteryMode === 'optional';
+  const batteryOptional = batteryMode === 'optional';
+  const peakSunHours = parseFloat(document.getElementById('peakSunHours').value) || 5.5;
   const panelWattage = parseFloat(document.getElementById('panelWattage').value) || 620;
   const panelPrice = parseFloat(document.getElementById('panelSellingPrice').value) || 10000;
 
@@ -981,7 +985,7 @@ function recalcAll() {
   const monthlyKwh = rateKwh > 0 ? monthlyBill / rateKwh : 0;
   const targetKwh = monthlyKwh * (targetOffset / 100);
   const dailyKwh = targetKwh / 30;
-  const dailyKwhPanel = (panelWattage / 1000) * peakSunHours * performanceRatio;
+  const dailyKwhPanel = (panelWattage / 1000) * peakSunHours;
 
   document.getElementById('monthlyKwh').value = monthlyKwh.toFixed(1);
   document.getElementById('targetKwh').value = targetKwh.toFixed(1);
@@ -1015,26 +1019,34 @@ function recalcAll() {
 
   // Inverter
   const overrideInv = document.getElementById('overrideInverter').value;
+  const noInverter = overrideInv === 'none';
   const inverterQtyRaw = parseInt(document.getElementById('overrideInverterQty').value);
-  const inverterQty = (isNaN(inverterQtyRaw) || inverterQtyRaw < 1) ? 1 : inverterQtyRaw;
-  let selectedInvIdx = -1;
-  if (overrideInv) {
-    selectedInvIdx = defaultInverters.findIndex(inv => inv.key === overrideInv);
-  } else {
-    for (let i = 0; i < defaultInverters.length; i++) {
-      const inv = defaultInverters[i];
-      if (systemKwp <= inv.maxPv * inverterQty && inv.rated * inverterQty >= systemKwp / 1.3) {
-        selectedInvIdx = i;
-        break;
-      }
-    }
-    if (selectedInvIdx === -1) selectedInvIdx = defaultInverters.length - 1;
-  }
-  const invSellEach = parseFloat(document.getElementById(`invSell_${selectedInvIdx}`).value) || 0;
-  const invSell = invSellEach * inverterQty;
+  const inverterQty = noInverter ? 0 : ((isNaN(inverterQtyRaw) || inverterQtyRaw < 1) ? 1 : inverterQtyRaw);
+  let selectedInvIdx = 0; // default fallback
+  let invSellEach = 0, invSell = 0, invDesc = '', invKey = '';
   const invTypeLabel = getInverterTypeLabel();
-  const invDesc = defaultInverters[selectedInvIdx].desc.replace('Hybrid', invTypeLabel);
-  const invKey = defaultInverters[selectedInvIdx].key;
+  if (noInverter) {
+    invDesc = 'None';
+    invKey = 'none';
+  } else {
+    if (overrideInv) {
+      selectedInvIdx = defaultInverters.findIndex(inv => inv.key === overrideInv);
+      if (selectedInvIdx === -1) selectedInvIdx = 0;
+    } else {
+      for (let i = 0; i < defaultInverters.length; i++) {
+        const inv = defaultInverters[i];
+        if (systemKwp <= inv.maxPv * inverterQty && inv.rated * inverterQty >= systemKwp / 1.3) {
+          selectedInvIdx = i;
+          break;
+        }
+      }
+      if (selectedInvIdx === -1) selectedInvIdx = defaultInverters.length - 1;
+    }
+    invSellEach = parseFloat(document.getElementById(`invSell_${selectedInvIdx}`).value) || 0;
+    invSell = invSellEach * inverterQty;
+    invDesc = defaultInverters[selectedInvIdx].desc.replace('Hybrid', invTypeLabel);
+    invKey = defaultInverters[selectedInvIdx].key;
+  }
 
   // Batteries
   const overrideBatt = document.getElementById('overrideBatteries').value;
@@ -1064,7 +1076,9 @@ function recalcAll() {
   document.getElementById('otherCostPerPanel').value = 'PHP ' + fmtNum(otherCostPerPanel) + ' / panel';
   document.getElementById('otherCostTotal').value = 'PHP ' + fmtNum(otherCost);
 
-  const rawSubtotal = panelTotal + inverterTotal + batteryTotal + wiringCost + laborCost + otherCost;
+  // If battery is optional, exclude from main subtotal
+  const batteryInSubtotal = batteryOptional ? 0 : batteryTotal;
+  const rawSubtotal = panelTotal + inverterTotal + batteryInSubtotal + wiringCost + laborCost + otherCost;
 
   // Discount
   const discountType = document.getElementById('discountType').value;
@@ -1105,18 +1119,26 @@ function recalcAll() {
 
   // Update calculated fields
   // MPPT string allocation — JKM policy: equal panels per MPPT
-  const invMpptEach = defaultInverters[selectedInvIdx].mppt;
-  const maxPanelsEach = defaultInverters[selectedInvIdx].maxPanels;
-  const invMppt = invMpptEach * inverterQty;
-  const maxPanelsTotal = maxPanelsEach * inverterQty;
-  const panelsPerMppt = maxPanelsEach / invMpptEach;
+  let invMpptEach = 0, maxPanelsEach = 0, invMppt = 0, maxPanelsTotal = 0, panelsPerMppt = 0;
+  if (!noInverter) {
+    invMpptEach = defaultInverters[selectedInvIdx].mppt;
+    maxPanelsEach = defaultInverters[selectedInvIdx].maxPanels;
+    invMppt = invMpptEach * inverterQty;
+    maxPanelsTotal = maxPanelsEach * inverterQty;
+    panelsPerMppt = maxPanelsEach / invMpptEach;
+  }
 
   // If auto-calculating (no override), snap panel count to nearest valid multiple of total MPPT count
   if (!overridePanels) {
     const rawPanels = Math.ceil(dailyKwh / dailyKwhPanel);
-    numPanels = Math.ceil(rawPanels / invMppt) * invMppt;
-    if (numPanels < invMppt && monthlyBill > 0) numPanels = invMppt;
-    if (numPanels > maxPanelsTotal) numPanels = maxPanelsTotal;
+    if (noInverter) {
+      // No inverter — just use raw panel count, no MPPT snapping
+      numPanels = rawPanels > 0 ? rawPanels : (monthlyBill > 0 ? 1 : 0);
+    } else {
+      numPanels = Math.ceil(rawPanels / invMppt) * invMppt;
+      if (numPanels < invMppt && monthlyBill > 0) numPanels = invMppt;
+      if (numPanels > maxPanelsTotal) numPanels = maxPanelsTotal;
+    }
   }
   const systemKwpFinal = numPanels * panelWattage / 1000;
 
@@ -1138,7 +1160,8 @@ function recalcAll() {
   const otherCostFinal = Math.ceil((panelPrice * (otherCostRate / 100)) * numPanels / 100) * 100;
   document.getElementById('otherCostPerPanel').value = 'PHP ' + fmtNum(panelPrice * (otherCostRate / 100)) + ' / panel';
   document.getElementById('otherCostTotal').value = 'PHP ' + fmtNum(otherCostFinal);
-  const rawSubtotalFinal = panelTotalFinal + inverterTotal + batteryTotal + wiringCost + laborCost + otherCostFinal;
+  const batteryInSubtotalFinal = batteryOptional ? 0 : batteryTotal;
+  const rawSubtotalFinal = panelTotalFinal + inverterTotal + batteryInSubtotalFinal + wiringCost + laborCost + otherCostFinal;
   // Recalculate discount
   discountAmount = 0;
   discountPct = 0;
@@ -1157,6 +1180,8 @@ function recalcAll() {
   const vatAmountFinal = includeVat ? subtotalFinal * 0.12 : 0;
   const receiptAmountFinal = includeReceipt ? subtotalFinal * 0.02 : 0;
   const grandTotalFinal = subtotalFinal + vatAmountFinal + receiptAmountFinal;
+  // Grand total WITH battery (for optional battery mode)
+  const grandTotalWithBattery = batteryOptional ? grandTotalFinal + batteryTotal : grandTotalFinal;
   // Recalculate savings
   const dailyGenFinal = numPanels * dailyKwhPanel;
   const monthlyGenSolarFinal = dailyGenFinal * 30;
@@ -1168,50 +1193,63 @@ function recalcAll() {
 
   // Build MPPT string allocation across all inverters
   const mpptStrings = [];
-  const totalMppts = invMppt;
-  const perMppt = Math.floor(numPanels / totalMppts);
-  let extraPanels = numPanels % totalMppts;
-  for (let m = 0; m < totalMppts; m++) {
-    mpptStrings.push(perMppt + (extraPanels > 0 ? 1 : 0));
-    if (extraPanels > 0) extraPanels--;
-  }
-
-  // Label: group by inverter if multiple
   let mpptLabel = '';
-  if (inverterQty === 1) {
-    mpptLabel = mpptStrings.map((n, i) => `MPPT${i+1}: ${n}`).join(' | ');
-  } else {
-    const parts = [];
-    for (let q = 0; q < inverterQty; q++) {
-      const start = q * invMpptEach;
-      const invParts = mpptStrings.slice(start, start + invMpptEach).map((n, i) => `M${i+1}:${n}`).join(',');
-      parts.push(`Inv${q+1}[${invParts}]`);
+  if (!noInverter && invMppt > 0) {
+    const totalMppts = invMppt;
+    const perMppt = Math.floor(numPanels / totalMppts);
+    let extraPanels = numPanels % totalMppts;
+    for (let m = 0; m < totalMppts; m++) {
+      mpptStrings.push(perMppt + (extraPanels > 0 ? 1 : 0));
+      if (extraPanels > 0) extraPanels--;
     }
-    mpptLabel = parts.join(' | ');
+
+    // Label: group by inverter if multiple
+    if (inverterQty === 1) {
+      mpptLabel = mpptStrings.map((n, i) => `MPPT${i+1}: ${n}`).join(' | ');
+    } else {
+      const parts = [];
+      for (let q = 0; q < inverterQty; q++) {
+        const start = q * invMpptEach;
+        const invParts = mpptStrings.slice(start, start + invMpptEach).map((n, i) => `M${i+1}:${n}`).join(',');
+        parts.push(`Inv${q+1}[${invParts}]`);
+      }
+      mpptLabel = parts.join(' | ');
+    }
   }
 
-  const panelWarning = numPanels > maxPanelsTotal ? ' \u26A0\uFE0F EXCEEDS MAX!' : '';
-  const unequalWarning = (numPanels % totalMppts !== 0) ? ' \u26A0\uFE0F Unequal MPPTs!' : '';
+  let panelWarning = '';
+  let unequalWarning = '';
+  if (!noInverter && invMppt > 0) {
+    panelWarning = numPanels > maxPanelsTotal ? ' \u26A0\uFE0F EXCEEDS MAX!' : '';
+    unequalWarning = (numPanels % invMppt !== 0) ? ' \u26A0\uFE0F Unequal MPPTs!' : '';
+  }
 
   document.getElementById('calcPanels').value = numPanels + ' pcs' + panelWarning + unequalWarning;
   document.getElementById('calcKwp').value = systemKwpFinal.toFixed(2) + ' kWp';
-  const invLabel = inverterQty > 1
-    ? inverterQty + 'x ' + invKey + ' — ' + defaultInverters[selectedInvIdx].rated + 'kW (' + invMpptEach + ' MPPTs each)'
-    : invKey + ' — ' + defaultInverters[selectedInvIdx].rated + 'kW (' + invMpptEach + ' MPPTs)';
-  document.getElementById('calcInverter').value = invLabel;
-  document.getElementById('calcBatteries').value = includeBattery ? numBatteries + ' unit(s)' : 'N/A';
-  document.getElementById('calcMppt').value = mpptLabel + ' (max ' + panelsPerMppt + '/MPPT, limit ' + maxPanelsTotal + ' total)';
-  if (numPanels > maxPanelsTotal || numPanels % totalMppts !== 0) {
-    document.getElementById('calcMppt').style.color = '#D32F2F';
-    document.getElementById('calcMppt').style.fontWeight = '700';
+  if (noInverter) {
+    document.getElementById('calcInverter').value = 'None (panels + battery only)';
+    document.getElementById('calcMppt').value = 'N/A \u2014 No inverter';
+    document.getElementById('calcMppt').style.color = '#9E9E9E';
+    document.getElementById('calcMppt').style.fontWeight = '400';
   } else {
-    document.getElementById('calcMppt').style.color = '#00897B';
-    document.getElementById('calcMppt').style.fontWeight = '600';
+    const invLabel = inverterQty > 1
+      ? inverterQty + 'x ' + invKey + ' — ' + defaultInverters[selectedInvIdx].rated + 'kW (' + invMpptEach + ' MPPTs each)'
+      : invKey + ' — ' + defaultInverters[selectedInvIdx].rated + 'kW (' + invMpptEach + ' MPPTs)';
+    document.getElementById('calcInverter').value = invLabel;
+    document.getElementById('calcMppt').value = mpptLabel + ' (max ' + panelsPerMppt + '/MPPT, limit ' + maxPanelsTotal + ' total)';
+    if (numPanels > maxPanelsTotal || numPanels % invMppt !== 0) {
+      document.getElementById('calcMppt').style.color = '#D32F2F';
+      document.getElementById('calcMppt').style.fontWeight = '700';
+    } else {
+      document.getElementById('calcMppt').style.color = '#00897B';
+      document.getElementById('calcMppt').style.fontWeight = '600';
+    }
   }
+  document.getElementById('calcBatteries').value = includeBattery ? (numBatteries + ' unit(s)' + (batteryOptional ? ' (Optional)' : '')) : 'N/A';
 
   // Update line items table (using post-MPPT final values)
   updateLineItems(numPanels, panelPrice, panelTotalFinal, invDesc, invSellEach, invSell, inverterQty, numBatteries, batteryTotal,
-    wiringCost, laborCost, otherCostFinal, discountAmount, discountPct, subtotalFinal, vatAmountFinal, receiptAmountFinal, grandTotalFinal, systemKwpFinal, includeBattery);
+    wiringCost, laborCost, otherCostFinal, discountAmount, discountPct, subtotalFinal, vatAmountFinal, receiptAmountFinal, grandTotalFinal, systemKwpFinal, includeBattery, noInverter, batteryOptional, grandTotalWithBattery);
 
   // Update summary
   document.getElementById('grandTotalDisplay').textContent = 'PHP ' + fmtNum(subtotalFinal);
@@ -1239,16 +1277,16 @@ function recalcAll() {
   // Store for PDF (using post-MPPT final values)
   currentSystem = {
     numPanels, systemKwp: systemKwpFinal, panelPrice, panelTotal: panelTotalFinal, panelWattage,
-    invKey, invDesc, invSellEach, invSell, inverterTotal, inverterQty, invTypeLabel,
-    numBatteries, batteryTotal, includeBattery,
+    invKey, invDesc, invSellEach, invSell, inverterTotal, inverterQty, invTypeLabel, noInverter,
+    numBatteries, batteryTotal, includeBattery, batteryOptional, grandTotalWithBattery,
     wiringCost, laborCost, otherCost: otherCostFinal, otherCostRate, discountAmount, discountPct, discountType,
     subtotal: subtotalFinal, vatAmount: vatAmountFinal, receiptAmount: receiptAmountFinal, grandTotal: grandTotalFinal,
     monthlySavings: monthlySavingsFinal, yearlySavings: yearlySavingsFinal, roiYears: roiYearsFinal,
     monthlyKwh, dailyKwh, dailyGen: dailyGenFinal, monthlyGen: monthlyGenFinal, battPrice1, battPriceN,
     invMppt: invMpptEach, invMpptTotal: invMppt, panelsPerMppt, maxPanelsTotal, mpptStrings,
-    invRated: defaultInverters[selectedInvIdx].rated,
-    invStringsEach: defaultInverters[selectedInvIdx].strings,
-    stringsPerMppt: Math.max(1, Math.round(defaultInverters[selectedInvIdx].strings / invMpptEach)),
+    invRated: noInverter ? 0 : defaultInverters[selectedInvIdx].rated,
+    invStringsEach: noInverter ? 0 : defaultInverters[selectedInvIdx].strings,
+    stringsPerMppt: noInverter ? 0 : Math.max(1, Math.round(defaultInverters[selectedInvIdx].strings / invMpptEach)),
     battKwh: battV * battAh / 1000, battAh,
     monthlyBill, rateKwh, targetOffset, peakSunHours,
   };
@@ -1278,12 +1316,13 @@ function drawMpptWiring(targetCtx, targetW, targetH) {
   ctx.fillRect(0, 0, W, H);
 
   const s = currentSystem;
-  if (!s || !s.numPanels || !s.mpptStrings || s.mpptStrings.length === 0) {
+  if (!s || !s.numPanels || s.noInverter || !s.mpptStrings || s.mpptStrings.length === 0) {
     ctx.fillStyle = '#9E9E9E';
     ctx.font = '13px Segoe UI, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Enter a bill to see the MPPT wiring schematic', W / 2, H / 2);
+    const msg = s && s.noInverter ? 'No inverter — MPPT wiring N/A' : 'Enter a bill to see the MPPT wiring schematic';
+    ctx.fillText(msg, W / 2, H / 2);
     return;
   }
 
@@ -1536,20 +1575,22 @@ function drawMpptWiring(targetCtx, targetW, targetH) {
 }
 
 function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach, invSellTotal, inverterQty, numBatteries, batteryTotal,
-  wiringCost, laborCost, otherCost, discountAmount, discountPct, subtotal, vatAmount, receiptAmount, grandTotal, systemKwp, includeBattery) {
+  wiringCost, laborCost, otherCost, discountAmount, discountPct, subtotal, vatAmount, receiptAmount, grandTotal, systemKwp, includeBattery, noInverter, batteryOptional, grandTotalWithBattery) {
   const panelDesc = document.getElementById('panelDesc').value;
   const battDesc = document.getElementById('battDesc').value;
   const tbody = document.getElementById('lineItemsBody');
 
   let rows = '';
   rows += `<tr><td>${panelDesc} (${systemKwp.toFixed(2)}kW)</td><td>${numPanels} pcs</td><td>${fmtNum(panelPrice)}</td><td>${fmtNum(panelTotal)}</td></tr>`;
-  if (inverterQty > 0) {
+  if (!noInverter && inverterQty > 0) {
     rows += `<tr><td>${invDesc}</td><td>${inverterQty} pc${inverterQty > 1 ? 's' : ''}</td><td>${fmtNum(invSellEach)}</td><td>${fmtNum(invSellTotal)}</td></tr>`;
   }
 
   if (includeBattery && numBatteries > 0) {
     const battUnit = batteryTotal / numBatteries;
-    rows += `<tr><td>${battDesc}</td><td>${numBatteries} unit(s)</td><td>${fmtNum(battUnit)}</td><td>${fmtNum(batteryTotal)}</td></tr>`;
+    const optStyle = batteryOptional ? ' style="color:#9E9E9E"' : '';
+    const optLabel = batteryOptional ? ' (Optional)' : '';
+    rows += `<tr${optStyle}><td>${battDesc}${optLabel}</td><td>${numBatteries} unit(s)</td><td>${fmtNum(battUnit)}</td><td>${fmtNum(batteryTotal)}</td></tr>`;
   }
 
   // Complete Installation & Commissioning — parent header
@@ -1586,6 +1627,11 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
     rows += `<tr class="total-row"><td colspan="3" style="text-align:right;padding-right:16px;">GRAND TOTAL</td><td>${fmtNum(grandTotal)}</td></tr>`;
   }
 
+  // Optional battery: show "Total with Battery" line
+  if (batteryOptional && batteryTotal > 0) {
+    rows += `<tr style="color:#9E9E9E;font-style:italic"><td colspan="3" style="text-align:right;padding-right:16px;">Total with Battery</td><td>${fmtNum(grandTotalWithBattery)}</td></tr>`;
+  }
+
   tbody.innerHTML = rows;
 }
 
@@ -1616,6 +1662,8 @@ function generatePDF() {
   const panelDesc = document.getElementById('panelDesc').value;
   const battDesc = document.getElementById('battDesc').value;
   const includeBattery = s.includeBattery && s.numBatteries > 0;
+  const noInverter = s.noInverter || false;
+  const batteryOptional = s.batteryOptional || false;
 
   let dateStr = '';
   if (dateVal) {
@@ -1710,7 +1758,7 @@ function generatePDF() {
     unit: s.panelPrice,
     amount: s.panelTotal
   });
-  if (s.inverterQty > 0) {
+  if (!noInverter && s.inverterQty > 0) {
     items.push({
       desc: s.invDesc,
       qty: s.inverterQty,
@@ -1721,10 +1769,11 @@ function generatePDF() {
   if (includeBattery) {
     const batUnit = s.batteryTotal / s.numBatteries;
     items.push({
-      desc: battDesc,
+      desc: battDesc + (batteryOptional ? ' (Optional)' : ''),
       qty: s.numBatteries,
       unit: batUnit,
-      amount: s.batteryTotal
+      amount: s.batteryTotal,
+      optional: batteryOptional
     });
   }
 
@@ -1743,6 +1792,9 @@ function generatePDF() {
     });
     if (line) lines.push(line);
 
+    // Gray color for optional items
+    if (item.optional) doc.setTextColor(158, 158, 158);
+
     const rowH = Math.max(lines.length * 0.16, 0.20);
     lines.forEach((ln, j) => {
       doc.text(ln, ml + 0.04, y + 0.14 + j * 0.16);
@@ -1753,6 +1805,7 @@ function generatePDF() {
     doc.text(fmtNum(item.unit), ml + colW[0] + colW[1] + colW[2] - 0.04, y + 0.14, { align: 'right' });
     doc.text(fmtNum(item.amount), ml + pw - 0.04, y + 0.14, { align: 'right' });
 
+    if (item.optional) doc.setTextColor(0, 0, 0);
     y += rowH + 0.08;
   });
 
@@ -1872,6 +1925,18 @@ function generatePDF() {
   doc.setFontSize(12);
   doc.text(fmtNum(s.subtotal), mr, y, { align: 'right' });
 
+  // Optional battery: "Total with Battery" line
+  if (batteryOptional && s.grandTotalWithBattery > s.grandTotal) {
+    y += 0.28;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(158, 158, 158);
+    doc.text('Total with Battery   PHP', ml + 3.0, y);
+    doc.setFontSize(11);
+    doc.text(fmtNum(s.grandTotalWithBattery), mr, y, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
+
   // Signatures
   y += 0.70;
   doc.setFont('helvetica', 'normal');
@@ -1922,6 +1987,8 @@ function generatePDF2() {
   const panelDesc = document.getElementById('panelDesc').value;
   const battDesc = document.getElementById('battDesc').value;
   const includeBattery = s.includeBattery && s.numBatteries > 0;
+  const noInverter = s.noInverter || false;
+  const batteryOptional = s.batteryOptional || false;
 
   let dateStr = '';
   if (dateVal) {
@@ -2015,7 +2082,7 @@ function generatePDF2() {
     qty: s.numPanels,
     amount: s.panelTotal
   });
-  if (s.inverterQty > 0) {
+  if (!noInverter && s.inverterQty > 0) {
     items2.push({
       desc: s.invDesc,
       qty: s.inverterQty,
@@ -2024,9 +2091,10 @@ function generatePDF2() {
   }
   if (includeBattery) {
     items2.push({
-      desc: battDesc,
+      desc: battDesc + (batteryOptional ? ' (Optional)' : ''),
       qty: s.numBatteries,
-      amount: s.batteryTotal
+      amount: s.batteryTotal,
+      optional: batteryOptional
     });
   }
 
@@ -2048,6 +2116,9 @@ function generatePDF2() {
     });
     if (line) lines.push(line);
 
+    // Gray color for optional items
+    if (item.optional) doc.setTextColor(158, 158, 158);
+
     const rowH = Math.max(lines.length * 0.16, 0.20);
     lines.forEach((ln, j) => {
       doc.text(ln, ml + 0.04, y + 0.14 + j * 0.16);
@@ -2055,6 +2126,8 @@ function generatePDF2() {
 
     const qtyStr = item.qty === 1 ? '1 pc' : item.qty + ' pcs';
     doc.text(qtyStr, ml + colW2[0] + colW2[1] / 2, y + 0.14, { align: 'center' });
+
+    if (item.optional) doc.setTextColor(0, 0, 0);
 
     // Show total amount only on the first item row (center of Amount column)
     if (isFirstItem) {
@@ -2157,6 +2230,18 @@ function generatePDF2() {
   doc.setFontSize(11);
   doc.text('PHP ' + fmtNum(s.subtotal), ml + pw - 0.04, y + 0.14, { align: 'right' });
   y += 0.28;
+
+  // Optional battery: "Total with Battery" line inside table
+  if (batteryOptional && s.grandTotalWithBattery > s.grandTotal) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(158, 158, 158);
+    doc.text('Total with Battery', ml + 0.04, y + 0.10);
+    doc.setFontSize(10);
+    doc.text('PHP ' + fmtNum(s.grandTotalWithBattery), ml + pw - 0.04, y + 0.10, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+    y += 0.24;
+  }
 
   // Table border
   const tableBottom2 = y;
@@ -2300,7 +2385,7 @@ function getProjectData() {
     // Constants
     exchangeRate: document.getElementById('exchangeRate').value,
     inverterMarkup: document.getElementById('inverterMarkup').value,
-    peakSunHours: document.getElementById('peakSunHours').value, performanceRatio: document.getElementById('performanceRatio').value,
+    peakSunHours: document.getElementById('peakSunHours').value,
     panelWattage: document.getElementById('panelWattage').value,
     panelSellingPrice: document.getElementById('panelSellingPrice').value,
     panelDesc: document.getElementById('panelDesc').value,
@@ -2502,7 +2587,7 @@ function applyProjectData(data) {
   // Constants
   if (data.exchangeRate !== undefined) document.getElementById('exchangeRate').value = data.exchangeRate;
   if (data.inverterMarkup !== undefined) document.getElementById('inverterMarkup').value = data.inverterMarkup;
-  if (data.peakSunHours !== undefined) document.getElementById('peakSunHours').value = data.peakSunHours; if (data.performanceRatio !== undefined) document.getElementById('performanceRatio').value = data.performanceRatio;
+  if (data.peakSunHours !== undefined) document.getElementById('peakSunHours').value = data.peakSunHours;
   if (data.panelWattage !== undefined) document.getElementById('panelWattage').value = data.panelWattage;
   if (data.panelSellingPrice !== undefined) document.getElementById('panelSellingPrice').value = data.panelSellingPrice;
   if (data.panelDesc !== undefined) document.getElementById('panelDesc').value = data.panelDesc;
@@ -2931,7 +3016,9 @@ function drawSchematic() {
   // ── INVERTER (top-center) — individual boxes ──
   const invX = 185;
   const invQty = s.inverterQty || 1;
-  if (invQty === 1) {
+  if (s.noInverter) {
+    drawBox(invX, topY, bw, bh, 'NO INVERTER', 'Panels + Battery\nOnly', '#9E9E9E');
+  } else if (invQty === 1) {
     drawBox(invX, topY, bw, bh, (s.invTypeLabel || 'Hybrid').toUpperCase() + ' INVERTER', 'Solis ' + s.invRated + 'kW\n' + s.invMppt + ' MPPTs', '#00897B');
   } else {
     const invBoxW = Math.min(80, (bw + 20) / invQty - 4);
@@ -3082,11 +3169,15 @@ function generateLayoutPDF() {
       'Notes:',
       '\u2022 ' + s.numPanels + ' panels x ' + panelDescVal + ' = ' + s.systemKwp.toFixed(2) + ' kWp',
       '\u2022 Each panel: 1134 x 2382 mm (Weight: 33.6 kg per panel)',
-      '\u2022 MPPT allocation: ' + s.mpptStrings.map((n, i) => 'MPPT' + (i+1) + ': ' + n + ' panels').join(', '),
-      '\u2022 Max panels per MPPT: ' + s.panelsPerMppt + ' | Max total for ' + s.invKey + ': ' + s.maxPanelsTotal,
-      '\u2022 Panel orientation: facing South preferred for maximum sunlight exposure',
-      '\u2022 Actual layout subject to site survey and roof dimensions',
     ];
+    if (!s.noInverter && s.mpptStrings && s.mpptStrings.length > 0) {
+      notes1.push('\u2022 MPPT allocation: ' + s.mpptStrings.map((n, i) => 'MPPT' + (i+1) + ': ' + n + ' panels').join(', '));
+      notes1.push('\u2022 Max panels per MPPT: ' + s.panelsPerMppt + ' | Max total for ' + s.invKey + ': ' + s.maxPanelsTotal);
+    } else if (s.noInverter) {
+      notes1.push('\u2022 No inverter included \u2014 panels and battery only');
+    }
+    notes1.push('\u2022 Panel orientation: facing South preferred for maximum sunlight exposure');
+    notes1.push('\u2022 Actual layout subject to site survey and roof dimensions');
     notes1.forEach(n => { doc.text(n, ml, y); y += 0.14; });
 
     // ── PAGE 2: Wiring Schematic ──
@@ -3111,9 +3202,13 @@ function generateLayoutPDF() {
     const specs = [
       'System Specifications:',
       '\u2022 Solar Array: ' + s.numPanels + ' x ' + panelW_val + 'W = ' + s.systemKwp.toFixed(2) + ' kWp',
-      '\u2022 Inverter: ' + (s.inverterQty > 1 ? s.inverterQty + 'x ' : '') + s.invDesc + ' (' + s.invMppt + ' MPPTs' + (s.inverterQty > 1 ? ' each' : '') + ', max ' + s.panelsPerMppt + ' panels/MPPT)',
-      '\u2022 Grid: 220V / 230V, 50Hz / 60Hz, Single Phase',
     ];
+    if (!s.noInverter) {
+      specs.push('\u2022 Inverter: ' + (s.inverterQty > 1 ? s.inverterQty + 'x ' : '') + s.invDesc + ' (' + s.invMppt + ' MPPTs' + (s.inverterQty > 1 ? ' each' : '') + ', max ' + s.panelsPerMppt + ' panels/MPPT)');
+    } else {
+      specs.push('\u2022 Inverter: None (additional panels + battery configuration)');
+    }
+    specs.push('\u2022 Grid: 220V / 230V, 50Hz / 60Hz, Single Phase');
     if (s.includeBattery && s.numBatteries > 0) {
       const totalKwh = (s.numBatteries * s.battKwh).toFixed(1);
       specs.push('\u2022 Battery: ' + s.numBatteries + ' x ' + battDesc + ' = ' + totalKwh + ' kWh total');
