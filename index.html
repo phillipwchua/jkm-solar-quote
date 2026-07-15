@@ -1588,7 +1588,7 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
 
   if (includeBattery && numBatteries > 0) {
     const battUnit = batteryTotal / numBatteries;
-    const optStyle = batteryOptional ? ' style="color:#9E9E9E"' : '';
+    const optStyle = batteryOptional ? ' style="color:#9E9E9E;font-style:italic;font-size:12px"' : '';
     const optLabel = batteryOptional ? ' (Optional)' : '';
     rows += `<tr${optStyle}><td>${battDesc}${optLabel}</td><td>${numBatteries} unit(s)</td><td>${fmtNum(battUnit)}</td><td>${fmtNum(batteryTotal)}</td></tr>`;
   }
@@ -1629,7 +1629,7 @@ function updateLineItems(numPanels, panelPrice, panelTotal, invDesc, invSellEach
 
   // Optional battery: show "Total with Battery" line
   if (batteryOptional && batteryTotal > 0) {
-    rows += `<tr style="color:#9E9E9E;font-style:italic"><td colspan="3" style="text-align:right;padding-right:16px;">Total with Battery</td><td>${fmtNum(grandTotalWithBattery)}</td></tr>`;
+    rows += `<tr style="color:#9E9E9E;font-style:italic;font-size:12px"><td colspan="3" style="text-align:right;padding-right:16px;">Total with Battery (Optional)</td><td>${fmtNum(grandTotalWithBattery)}</td></tr>`;
   }
 
   tbody.innerHTML = rows;
@@ -1792,8 +1792,12 @@ function generatePDF() {
     });
     if (line) lines.push(line);
 
-    // Gray color for optional items
-    if (item.optional) doc.setTextColor(158, 158, 158);
+    // Gray, italic, smaller font for optional items
+    if (item.optional) {
+      doc.setTextColor(158, 158, 158);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+    }
 
     const rowH = Math.max(lines.length * 0.16, 0.20);
     lines.forEach((ln, j) => {
@@ -1805,7 +1809,11 @@ function generatePDF() {
     doc.text(fmtNum(item.unit), ml + colW[0] + colW[1] + colW[2] - 0.04, y + 0.14, { align: 'right' });
     doc.text(fmtNum(item.amount), ml + pw - 0.04, y + 0.14, { align: 'right' });
 
-    if (item.optional) doc.setTextColor(0, 0, 0);
+    if (item.optional) {
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+    }
     y += rowH + 0.08;
   });
 
@@ -1925,16 +1933,17 @@ function generatePDF() {
   doc.setFontSize(12);
   doc.text(fmtNum(s.subtotal), mr, y, { align: 'right' });
 
-  // Optional battery: "Total with Battery" line
+  // Optional battery: "Total with Battery (Optional)" line
   if (batteryOptional && s.grandTotalWithBattery > s.grandTotal) {
     y += 0.28;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
     doc.setTextColor(158, 158, 158);
-    doc.text('Total with Battery   PHP', ml + 3.0, y);
-    doc.setFontSize(11);
+    doc.text('Total with Battery (Optional)   PHP', ml + 3.0, y);
+    doc.setFontSize(9);
     doc.text(fmtNum(s.grandTotalWithBattery), mr, y, { align: 'right' });
     doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
   }
 
   // Signatures
@@ -2116,8 +2125,12 @@ function generatePDF2() {
     });
     if (line) lines.push(line);
 
-    // Gray color for optional items
-    if (item.optional) doc.setTextColor(158, 158, 158);
+    // Gray, italic, smaller font for optional items
+    if (item.optional) {
+      doc.setTextColor(158, 158, 158);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+    }
 
     const rowH = Math.max(lines.length * 0.16, 0.20);
     lines.forEach((ln, j) => {
@@ -2127,7 +2140,11 @@ function generatePDF2() {
     const qtyStr = item.qty === 1 ? '1 pc' : item.qty + ' pcs';
     doc.text(qtyStr, ml + colW2[0] + colW2[1] / 2, y + 0.14, { align: 'center' });
 
-    if (item.optional) doc.setTextColor(0, 0, 0);
+    if (item.optional) {
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+    }
 
     // Show total amount only on the first item row (center of Amount column)
     if (isFirstItem) {
@@ -2231,15 +2248,16 @@ function generatePDF2() {
   doc.text('PHP ' + fmtNum(s.subtotal), ml + pw - 0.04, y + 0.14, { align: 'right' });
   y += 0.28;
 
-  // Optional battery: "Total with Battery" line inside table
+  // Optional battery: "Total with Battery (Optional)" line inside table
   if (batteryOptional && s.grandTotalWithBattery > s.grandTotal) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
     doc.setTextColor(158, 158, 158);
-    doc.text('Total with Battery', ml + 0.04, y + 0.10);
-    doc.setFontSize(10);
+    doc.text('Total with Battery (Optional)', ml + 0.04, y + 0.10);
+    doc.setFontSize(9);
     doc.text('PHP ' + fmtNum(s.grandTotalWithBattery), ml + pw - 0.04, y + 0.10, { align: 'right' });
     doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
     y += 0.24;
   }
 
