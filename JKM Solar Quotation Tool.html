@@ -622,6 +622,7 @@ body {
           <select id="inverterType" class="input-yellow" onchange="onInverterTypeChange()">
             <option value="hybrid">Hybrid</option>
             <option value="non-hybrid">Non-Hybrid (-10%)</option>
+              <option value="grid-tie">Grid-Tie (no battery)</option>
           </select>
         </div>
         <div class="form-group">
@@ -633,6 +634,8 @@ body {
             <option value="12K">12kW</option>
             <option value="16K">16kW</option>
             <option value="18K">18kW</option>
+              <option value="10K-GT">10kW GT</option>
+              <option value="15K-GT">15kW GT</option>
           </select>
         </div>
         <div class="form-group">
@@ -846,14 +849,46 @@ const defaultInverters = [
 
 function getInverterTypeFactor() {
   const invType = document.getElementById('inverterType').value;
-  return invType === 'non-hybrid' ? 0.90 : 1.0;
+  if (invType === 'non-hybrid') return 0.90;
+  return 1.0;
 }
 
 function getInverterTypeLabel() {
-  return document.getElementById('inverterType').value === 'non-hybrid' ? 'Grid-Tie' : 'Hybrid';
+  const invType = document.getElementById('inverterType').value;
+  if (invType === 'grid-tie') return 'Grid-Tie';
+  if (invType === 'non-hybrid') return 'Non-Hybrid';
+  return 'Hybrid';
 }
 
 function onInverterTypeChange() {
+  const invType = document.getElementById('inverterType').value;
+  const batterySelect = document.getElementById('includeBattery');
+  const overrideBatt = document.getElementById('overrideBatteries');
+  if (invType === 'grid-tie') {
+    if (batterySelect) { batterySelect.value = 'no'; batterySelect.disabled = true; }
+    if (overrideBatt) { overrideBatt.value = '0'; overrideBatt.disabled = true; }
+  } else {
+    if (batterySelect) batterySelect.disabled = false;
+    if (overrideBatt) overrideBatt.disabled = false;
+  }
+  const overrideEl = document.getElementById('overrideInverter');
+  if (overrideEl) {
+    const currentVal = overrideEl.value;
+    overrideEl.innerHTML = '';
+    let optAuto = document.createElement('option'); optAuto.value = ''; optAuto.text = 'Auto'; overrideEl.add(optAuto);
+    let optNone = document.createElement('option'); optNone.value = 'none'; optNone.text = 'None'; overrideEl.add(optNone);
+    for (const inv of defaultInverters) {
+      const isGT = inv.key.includes('-GT');
+      if (invType === 'grid-tie' && !isGT) continue;
+      if (invType !== 'grid-tie' && isGT) continue;
+      let opt = document.createElement('option');
+      opt.value = inv.key;
+      opt.text = inv.rated + 'kW' + (isGT ? ' GT' : '');
+      overrideEl.add(opt);
+    }
+    overrideEl.value = currentVal;
+    if (!overrideEl.value && currentVal !== 'none') overrideEl.value = '';
+  }
   buildInverterTable();
   recalcAll();
 }
@@ -953,20 +988,36 @@ function recalcAll() {
   if (overrideInv) {
     selectedInvIdx = defaultInverters.findIndex(inv => inv.key === overrideInv);
   } else {
-    for (let i = 0; i < defaultInverters.length; i++) {
-      const inv = defaultInverters[i];
-      if (systemKwp <= inv.maxPv * inverterQty && inv.rated * inverterQty >= systemKwp / 1.3) {
-        selectedInvIdx = i;
-        break;
+    // Filter inverters by type for auto-selection
+      const invTypeForFilter = document.getElementById('inverterType').value;
+      const filteredInverters = defaultInverters.filter(inv => {
+        const isGT = inv.key.includes('-GT');
+        if (invTypeForFilter === 'grid-tie') return isGT;
+        return !isGT;
+      });
+      for (let i = 0; i < filteredInverters.length; i++) {
+        const inv = filteredInverters[i];
+        if (systemKwp <= inv.maxPv * inverterQty && inv.rated * inverterQty >= systemKwp / 1.3) {
+          selectedInvIdx = defaultInverters.indexOf(inv);
+          break;
+        }
       }
-    }
-    if (selectedInvIdx === -1) selectedInvIdx = defaultInverters.length - 1;
+      if (selectedInvIdx === -1) {
+        const lastMatch = filteredInverters[filteredInverters.length - 1];
+        selectedInvIdx = defaultInverters.indexOf(lastMatch);
+      }
   }
   const invSellEach = parseFloat(document.getElementById(`invSell_${selectedInvIdx}`).value) || 0;
   const invSell = invSellEach * inverterQty;
   const invTypeLabel = getInverterTypeLabel();
   const invDesc = defaultInverters[selectedInvIdx].desc.replace('Hybrid', invTypeLabel);
   const invKey = defaultInverters[selectedInvIdx].key;
+  // Auto-set Three Phase for 15K-GT (380V inverter)
+  if (invKey === '15K-GT') {
+    document.getElementById('phaseType').value = 'Three Phase';
+  } else if (document.getElementById('inverterType').value === 'grid-tie' && invKey === '10K-GT') {
+    document.getElementById('phaseType').value = 'Single Phase';
+  }
 
   // Batteries
   const overrideBatt = document.getElementById('overrideBatteries').value;
